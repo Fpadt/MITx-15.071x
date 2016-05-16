@@ -1,0 +1,1170 @@
+---
+title: "MITx 15.071x "
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+Sys.setlocale("LC_ALL", "C")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+Set
+
+# Data Settings
+
+pPath     <- "./60_Results" 
+pXLSX     <- paste0("MITx") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(PROJECT = "MITx_Week01"), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+```{r ReadRawData, echo=fECHO, eval=fEVAL}
+dtWHO <- fread("./data/raw/WHO.csv", stringsAsFactors = FALSE)
+dtWHO[, `:=`(GNI                           = as.numeric(GNI),
+             LiteracyRate                  = as.numeric(LiteracyRate),
+             FertilityRate                 = as.numeric(FertilityRate),
+             PrimarySchoolEnrollmentMale   = as.numeric(PrimarySchoolEnrollmentMale),
+             PrimarySchoolEnrollmentFemale = as.numeric(PrimarySchoolEnrollmentFemale))]
+
+str(dtWHO)
+summary(dtWHO)
+write.csv(dtWHO, file = "./data/raw/WHO2.csv")
+
+which.min(dtWHO$Under15)
+dtWHO[86, .(Country)]
+dtWHO[which.max(dtWHO$Under15), .(Country)]
+with(dtWHO, plot(x = GNI, y = FertilityRate))
+Outliers <- subset(dtWHO, GNI > 10000 & FertilityRate > 2.5)
+Outliers
+
+mean(dtWHO$Over60)
+dtWHO[which.min(Over60),       .(Country)]
+dtWHO[which.max(LiteracyRate), .(Country)]
+
+hist(dtWHO$CellularSubscribers)
+boxplot(dtWHO$LifeExpectancy ~ dtWHO$Region)
+boxplot(dtWHO$LifeExpectancy ~ dtWHO$Region, 
+        x    = "",
+        y    = "Life Expectancy", 
+        main = "Life of Expectancy of Countries ")
+table(dtWHO$Region)
+
+tapply(dtWHO$Over60      , dtWHO$Region, mean)
+tapply(dtWHO$LiteracyRate, dtWHO$Region, min)
+tapply(dtWHO$LiteracyRate, dtWHO$Region, min, na.rm = TRUE)
+dtWHO[, min(LiteracyRate, na.rm = TRUE), by = .(Region)]
+
+tapply(dtWHO$ChildMortality, dtWHO$Region, min, na.rm = TRUE)
+dtWHO[, min(ChildMortality , na.rm = TRUE), by = .(Region)]
+
+```
+
+Problem 1.1 - Loading the Data 
+(1 point possible)
+
+Read the dataset mvtWeek1.csv into R, using the read.csv function, and call the data frame "mvt". Remember to navigate to the directory on your computer containing the file mvtWeek1.csv first. It may take a few minutes to read in the data, since it is pretty large. Then, use the str and summary functions to answer the following questions.
+
+How many rows of data (observations) are in this dataset?
+
+```{r}
+dtMVT <- fread("./data/raw/mvtWeek1.csv")
+nrow(dtMVT)
+```
+
+Problem 1.2 - Loading the Data 
+(1 point possible)
+
+How many variables are in this dataset?
+```{r}
+ncol(dtMVT)
+
+```
+
+Problem 1.3 - Loading the Data 
+(1 point possible)
+ 
+Using the "max" function, what is the maximum value of the variable "ID"?
+```{r}
+dtMVT[, max(ID)]
+max(dtMVT$ID)
+```
+
+Problem 1.4 - Loading the Data 
+(1 point possible)
+
+What is the minimum value of the variable "Beat"?
+```{r}
+dtMVT[, min(Beat)]
+min(dtMVT$Beat)
+```
+
+Problem 1.5 - Loading the Data 
+(1 point possible)
+
+How many observations have value TRUE in the Arrest variable (this is the number of crimes for which an arrest was made)?
+
+```{r}
+dtMVT[, sum(Arrest)]
+sum(dtMVT$Arrest)
+```
+
+Problem 1.6 - Loading the Data 
+(1 point possible)
+ 
+How many observations have a LocationDescription value of ALLEY?
+```{r}
+dtMVT[LocationDescription == "ALLEY", .N]
+```
+
+Problem 2.1 - Understanding Dates in R 
+(1 point possible)
+
+In many datasets, like this one, you have a date field. Unfortunately, R does not automatically recognize entries that look like dates. We need to use a function in R to extract the date and time. Take a look at the first entry of Date (remember to use square brackets when looking at a certain entry of a variable). 
+
+In what format are the entries in the variable Date?
+
+-Month/Day/Year Hour:Minute   
+Day/Month/Year Hour:Minute   
+Hour:Minute Month/Day/Year   
+Hour:Minute Day/Month/Year 
+
+Problem 2.2 - Understanding Dates in R 
+(1 point possible)
+
+Now, let's convert these characters into a Date object in R. In your R console, type
+
+DateConvert = as.Date(strptime(mvt$Date, "%m/%d/%y %H:%M"))
+
+This converts the variable "Date" into a Date object in R. Take a look at the variable DateConvert using the summary function.
+
+What is the month and year of the median date in our dataset? Enter your answer as "Month Year", without the quotes. (Ex: if the answer was 2008-03-28, you would give the answer "March 2008", without the quotes.)
+
+```{r}
+DateConvert = as.Date(strptime(dtMVT$Date, "%m/%d/%y %H:%M"))
+median(DateConvert)
+```
+
+Problem 2.3 - Understanding Dates in R 
+(1 point possible)
+
+Now, let's extract the month and the day of the week, and add these variables to our data frame mvt. We can do this with two simple functions. Type the following commands in R:
+
+mvt$Month   = months(DateConvert)
+mvt$Weekday = weekdays(DateConvert)
+
+This creates two new variables in our data frame, Month and Weekday, and sets them equal to the month and weekday values that we can extract from the Date object. Lastly, replace the old Date variable with DateConvert by typing:
+
+mvt$Date = DateConvert
+
+Using the table command, answer the following questions.
+
+In which month did the fewest motor vehicle thefts occur?
+
+```{r}
+dtMVT[, `:=`(Date = as.Date(Date, "%m/%d/%y %H:%M"))]
+dtMVT[, `:=`(Month   = months(Date), 
+             Weekday = weekdays(Date))]
+dtMVT[, .N, by = .(Month)][N == min(N)]
+```
+
+Problem 2.4 - Understanding Dates in R 
+(1 point possible)
+
+On which weekday did the most motor vehicle thefts occur?
+
+```{r}
+dtMVT[, .N, by = .(Weekday)][N == max(N)]
+```
+
+Problem 2.5 - Understanding Dates in R 
+(1 point possible)
+
+Each observation in the dataset represents a motor vehicle theft, and the Arrest variable indicates whether an arrest was later made for this theft. Which month has the largest number of motor vehicle thefts for which an arrest was made?
+
+```{r}
+dtMVT[Arrest == TRUE, .N, by = .(Month)][N == max(N)]
+```
+
+Problem 3.1 - Visualizing Crime Trends 
+(3 points possible)
+
+Now, let's make some plots to help us better understand how crime has changed over time in Chicago. Throughout this problem, and in general, you can save your plot to a file. For more information, this website very clearly explains the process. 
+
+First, let's make a histogram of the variable Date. We'll add an extra argument, to specify the number of bars we want in our histogram. In your R console, type
+
+hist(mvt$Date, breaks=100)
+
+Looking at the histogram, answer the following questions.
+In general, does it look like crime increases or decreases from 2002 - 2012?
+
+```{r}
+hist(dtMVT$Date, breaks=100)
+```
+
+Problem 3.2 - Visualizing Crime Trends 
+(1 point possible)
+
+[BoxPlot](http://www.r-bloggers.com/box-plot-with-r-tutorial/)
+
+Now, let's see how arrests have changed over time. Create a boxplot of the variable "Date", sorted by the variable "Arrest" (if you are not familiar with boxplots and would like to learn more, check out this tutorial). In a boxplot, the bold horizontal line is the median value of the data, the box shows the range of values between the first quartile and third quartile, and the whiskers (the dotted lines extending outside the box) show the minimum and maximum values, excluding any outliers (which are plotted as circles). Outliers are defined by first computing the difference between the first and third quartile values, or the height of the box. This number is called the Inter-Quartile Range (IQR). Any point that is greater than the third quartile plus the IQR or less than the first quartile minus the IQR is considered an outlier.
+
+Does it look like there were more crimes for which arrests were made in the first half of the time period or the second half of the time period? (Note that the time period is from 2001 to 2012, so the middle of the time period is the beginning of 2007.)
+
+ First half   Second half 
+ 
+ 
+```{r}
+dtMVT[, HALF:= "F"][Date >= as.Date("01-01-2007", "%d-%m-%Y "), HALF:= "S"]
+boxplot(dtMVT$Date ~ dtMVT$Arrest, las = 2)
+```
+
+Problem 3.3 - Visualizing Crime Trends 
+(2 points possible)
+
+Let's investigate this further. Use the table function for the next few questions.
+For what proportion of motor vehicle thefts in 2001 was an arrest made? 
+
+Note: in this question and many others in the course, we are asking for an answer as a proportion. Therefore, your answer should take a value between 0 and 1.
+```{r}
+nrow(dtMVT[Year == 2001 & Arrest == TRUE]) / nrow(dtMVT[Year == 2001])
+```
+
+Problem 3.4 - Visualizing Crime Trends 
+(1 point possible)
+
+For what proportion of motor vehicle thefts in 2007 was an arrest made? 
+```{r}
+dtMVT2 <- dtMVT[, .N, by = .(Year, Arrest)]
+dtMVT2 <- dcast.data.table(dtMVT2, Year ~ Arrest, fun=sum, value.var = "N")
+setnames(dtMVT2, c("FALSE", "TRUE"), c("N", "A" ))
+dtMVT2[, P:= A/(A + N)]
+
+table(dtMVT$Arrest, dtMVT$Year)
+```
+
+Problem 4.1 - Popular Locations 
+(1 point possible)
+
+Analyzing this data could be useful to the Chicago Police Department when deciding where to allocate resources. If they want to increase the number of arrests that are made for motor vehicle thefts, where should they focus their efforts?
+
+We want to find the top five locations where motor vehicle thefts occur. If you create a table of the LocationDescription variable, it is unfortunately very hard to read since there are 78 different locations in the data set. By using the sort function, we can view this same table, but sorted by the number of observations in each category. In your R console, type:
+
+sort(table(mvt$LocationDescription))
+
+Which locations are the top five locations for motor vehicle thefts, excluding the "Other" category? You should select 5 of the following options.
+
+ Bank   Gas Station   Hotel/Motel   Street   Car Wash   Restaurant   Parking Lot/Garage (Non-Residential)   Alley   Driveway (Residential)   Vacant Lot/Land 
+ 
+ 
+```{r}
+sort(table(dtMVT$LocationDescription))
+dtMVT[LocationDescription != "OTHER", .N, by = .(LocationDescription)][order(N, decreasing = TRUE)][1:5]
+```
+
+Problem 4.2 - Popular Locations 
+(1 point possible)
+
+Create a subset of your data, only taking observations for which the theft happened in one of these five locations, and call this new data set "Top5". To do this, you can use the | symbol. In lecture, we used the & symbol to use two criteria to make a subset of the data. To only take observations that have a certain value in one variable or the other, the | character can be used in place of the & symbol. This is also called a logical "or" operation.
+
+Alternately, you could create five different subsets, and then merge them together into one data frame using rbind. 
+
+How many observations are in Top5?
+```{r}
+dtMVT[LocationDescription != "OTHER", .N, 
+      by = .(LocationDescription)][order(N, decreasing = TRUE)][1:5, sum(N)]
+```
+
+Problem 4.3 - Popular Locations 
+(2 points possible)
+ 
+R will remember the other categories of the LocationDescription variable from the original dataset, so running table(Top5$LocationDescription) will have a lot of unnecessary output. To make our tables a bit nicer to read, we can refresh this factor variable. In your R console, type:
+
+Top5$LocationDescription = factor(Top5$LocationDescription)
+
+If you run the str or table function on Top5 now, you should see that LocationDescription now only has 5 values, as we expect.
+
+Use the Top5 data frame to answer the remaining questions.
+
+One of the locations has a much higher arrest rate than the other locations. Which is it? Please enter the text in exactly the same way as how it looks in the answer options for Problem 4.1. 
+
+```{r}
+dtMVT[LocationDescription != "OTHER", .(N = .N, A = sum(Arrest), P = sum(Arrest)/.N ), 
+      by = .(LocationDescription)][order(N, 
+                                         decreasing = TRUE)][1:5][order(P, 
+                                                                        decreasing = TRUE)][1, .(LocationDescription)]
+
+mvt <- read.csv("./data/raw/mvtWeek1.csv")
+TopLocations = c("STREET", 
+                 "PARKING LOT/GARAGE(NON.RESID.)", 
+                 "ALLEY", 
+                 "GAS STATION", 
+                 "DRIVEWAY - RESIDENTIAL")
+
+Top5 = subset(mvt, LocationDescription %in% TopLocations)
+Top5$LocationDescription = factor(Top5$LocationDescription)
+```
+
+Problem 4.4 - Popular Locations 
+(1 point possible)
+
+On which day of the week do the most motor vehicle thefts at gas stations happen?
+```{r}
+dtMVT[LocationDescription == "GAS STATION", .N, by = .(Weekday)][order(N, decreasing = TRUE)][1]
+```
+
+Problem 4.5 - Popular Locations 
+(1 point possible)
+ 
+On which day of the week do the fewest motor vehicle thefts in residential driveways happen?
+
+ Monday Tuesday Wednesday Thursday Friday Saturday Sunday  
+
+```{r}
+dtMVT[LocationDescription == "DRIVEWAY - RESIDENTIAL", .N, by = .(Weekday)][order(N, decreasing = FALSE)][1]
+```
+
+```{r}
+
+```
+
+STOCK DYNAMICS
+
+A stock market is where buyers and sellers trade shares of a company, and is one of the most popular ways for individuals and companies to invest money. The size of the world stock market  is now estimated to be in the trillions. The largest stock market in the world is the New York Stock Exchange (NYSE), located in New York City. About 2,800 companies are listed on the NSYE. In this problem, we'll look at the monthly stock prices of five of these companies: IBM, General Electric (GE), Procter and Gamble, Coca Cola, and Boeing. The data used in this problem comes from Infochimps.
+
+Download and read the following files into R, using the read.csv function: IBMStock.csv, GEStock.csv, ProcterGambleStock.csv, CocaColaStock.csv, and BoeingStock.csv. (Do not open these files in any spreadsheet software before completing this problem because it might change the format of the Date field.)
+
+Call the data frames "IBM", "GE", "ProcterGamble", "CocaCola", and "Boeing", respectively. Each data frame has two variables, described as follows:
+
+Date: the date of the stock price, always given as the first of the month.
+StockPrice: the average stock price of the company in the given month.
+In this problem, we'll take a look at how the stock dynamics of these companies have changed over time.
+
+Problem 1.1 - Summary Statistics
+
+(1 point possible)
+Before working with these data sets, we need to convert the dates into a format that R can understand. Take a look at the structure of one of the datasets using the str function. Right now, the date variable is stored as a factor. We can convert this to a "Date" object in R by using the following five commands (one for each data set):
+
+IBM$Date = as.Date(IBM$Date, "%m/%d/%y")
+
+GE$Date = as.Date(GE$Date, "%m/%d/%y")
+
+CocaCola$Date = as.Date(CocaCola$Date, "%m/%d/%y")
+
+ProcterGamble$Date = as.Date(ProcterGamble$Date, "%m/%d/%y")
+
+Boeing$Date = as.Date(Boeing$Date, "%m/%d/%y")
+
+The first argument to the as.Date function is the variable we want to convert, and the second argument is the format of the Date variable. We can just overwrite the original Date variable values with the output of this function. Now, answer the following questions using the str and summary functions.
+
+Our five datasets all have the same number of observations. How many observations are there in each data set?
+
+```{r}
+IBM           <- fread(input = "./data/raw/IBMStock.csv")
+GE            <- fread(input = "./data/raw/GEStock.csv")
+ProcterGamble <- fread(input = "./data/raw/ProcterGambleStock.csv")
+CocaCola      <- fread(input = "./data/raw/CocaColaStock.csv")
+Boeing        <- fread(input = "./data/raw/BoeingStock.csv")
+
+IBM$Date           = as.Date(IBM$Date,           "%m/%d/%y")
+GE$Date            = as.Date(GE$Date,            "%m/%d/%y")
+CocaCola$Date      = as.Date(CocaCola$Date,      "%m/%d/%y")
+ProcterGamble$Date = as.Date(ProcterGamble$Date, "%m/%d/%y")
+Boeing$Date        = as.Date(Boeing$Date,        "%m/%d/%y")
+```
+
+Problem 1.2 - Summary Statistics
+
+(1 point possible)
+What is the earliest year in our datasets?
+
+```{r}
+Stock <- rbind(IBM, GE, CocaCola, ProcterGamble, Boeing)
+
+str(IBM)
+summary(IBM)
+
+str(GE)
+summary(GE)
+
+str(CocaCola)
+summary(CocaCola)
+
+str(ProcterGamble)
+summary(ProcterGamble)
+
+str(Boeing)
+summary(Boeing)
+
+```
+
+Problem 1.3 - Summary Statistics
+
+(1 point possible)
+What is the latest year in our datasets?
+
+```{r}
+summary(rbind(IBM, GE, CocaCola, ProcterGamble, Boeing))
+```
+
+Problem 2.1 - Visualizing Stock Dynamics
+
+(2 points possible)
+Let's plot the stock prices to see if we can visualize trends in stock prices during this time period. Using the plot function, plot the Date on the x-axis and the StockPrice on the y-axis, for Coca-Cola.
+
+This plots our observations as points, but we would really like to see a line instead, since this is a continuous time period. To do this, add the argument type="l" to your plot command, and re-generate the plot (the character is quotes is the letter l, for line). You should now see a line plot of the Coca-Cola stock price.
+
+Around what year did Coca-Cola has its highest stock price in this time period?
+
+```{r}
+with(CocaCola, plot(x = Date, y = StockPrice, type = "l", col="red"))
+
+```
+
+Problem 2.2 - Visualizing Stock Dynamics
+
+(1 point possible)
+Now, let's add the line for Procter & Gamble too. You can add a line to a plot in R by using the lines function instead of the plot function. Keeping the plot for Coca-Cola open, type in your R console:
+
+lines(ProcterGamble$Date, ProcterGamble$StockPrice)
+
+Unfortunately, it's hard to tell which line is which. Let's fix this by giving each line a color. First, re-run the plot command for Coca-Cola, but add the argument col="red". You should see the plot for Coca-Cola show up again, but this time in red. Now, let's add the Procter & Gamble line (using the lines function like we did before), adding the argument col="blue". You should now see in your plot the Coca-Cola stock price in red, and the Procter & Gamble stock price in blue.
+
+As an alternative choice to changing the colors, you could instead change the line type of the Procter & Gamble line by adding the argument lty=2. This will make the Procter & Gamble line dashed.
+
+Using this plot, answer the following questions.
+
+In March of 2000, the technology bubble burst, and a stock market crash occurred. According to this plot, which company's stock dropped more?
+
+```{r}
+with(ProcterGamble, lines(x = Date, y = StockPrice, type = "l", col="blue"))
+abline(v=as.Date(c("2000-03-01")), lwd=2)
+abline(v=as.Date(c("1983-01-01")), lwd=2)
+abline(v=as.Date(c("1983-12-31")), lwd=2)
+```
+
+Problem 3.1 - Visualizing Stock Dynamics 1995-2005
+
+(1 point possible)
+Let's take a look at how the stock prices changed from 1995-2005 for all five companies. In your R console, start by typing the following plot command:
+
+plot(CocaCola$Date[301:432], CocaCola$StockPrice[301:432], type="l", col="red", ylim=c(0,210))
+
+This will plot the CocaCola stock prices from 1995 through 2005, which are the observations numbered from 301 to 432. The additional argument, ylim=c(0,210), makes the y-axis range from 0 to 210. This will allow us to see all of the stock values when we add in the other companies.
+
+Now, use the lines function to add in the other four companies, remembering to only plot the observations from 1995 to 2005, or [301:432]. You don't need the "type" or "ylim" arguments for the lines function, but remember to make each company a different color so that you can tell them apart. Some color options are "red", "blue", "green", "purple", "orange", and "black". To see all of the color options in R, type colors() in your R console.
+
+(If you prefer to change the type of the line instead of the color, here are some options for changing the line type: lty=2 will make the line dashed, lty=3 will make the line dotted, lty=4 will make the line alternate between dashes and dots, and lty=5 will make the line long-dashed.)
+
+Use this plot to answer the following four questions.
+
+Which stock fell the most right after the technology bubble burst in March 2000?
+
+```{r}
+colors()
+with(CocaCola     , plot( x = Date[301:432], y = StockPrice[301:432], 
+                          type="l", col="red", ylim=c(0,210)))
+with(ProcterGamble, lines(x = Date[301:432], y = StockPrice[301:432], 
+                          type = "l", col="blue"))
+with(GE           , lines(x = Date[301:432], y = StockPrice[301:432], 
+                          type = "l", col="green"))
+with(IBM          , lines(x = Date[301:432], y = StockPrice[301:432], 
+                          type = "l", col="orange", lwd=2))
+with(Boeing       , lines(x = Date[301:432], y = StockPrice[301:432], 
+                          type = "l", col="purple"))
+abline(v=as.Date(c("2000-03-01")), lwd=2)
+
+abline(v=as.Date(c("1997-09-01")), lwd=2)
+abline(v=as.Date(c("1997-11-01")), lwd=2)
+
+abline(v=as.Date(c("2004-01-01")), lty=2)
+abline(v=as.Date(c("2005-01-01")), lty=2)
+```
+
+
+Problem 3.2 - Visualizing Stock Dynamics 1995-2005
+
+(1/1 point)
+Which stock reaches the highest value in the time period 1995-2005?
+
+ Coca-Cola  Procter and Gamble  IBM IBM - correct  General Electric (GE)  Boeing
+ FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER  TOGGLE ANSWER VISIBILITYSHOW ANSWER You have used 1 of 2 submissions
+Problem 3.3 - Visualizing Stock Dynamics 1995-2005
+
+(1/1 point)
+In October of 1997, there was a global stock market crash that was caused by an economic crisis in Asia. Comparing September 1997 to November 1997, which companies saw a decreasing trend in their stock price? (Select all that apply.)
+
+ Coca-Cola  Procter and Gamble  IBM  General Electric (GE)  Boeing
+Procter and Gamble, Boeing, - This answer is correct.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER  TOGGLE ANSWER VISIBILITYSHOW ANSWER You have used 1 of 2 submissions
+Problem 3.4 - Visualizing Stock Dynamics 1995-2005
+
+(1/1 point)
+In the last two years of this time period (2004 and 2005) which stock seems to be performing the best, in terms of increasing stock price?
+
+ Coca-Cola  Procter and Gamble  IBM  General Electric (GE)  Boeing Boeing - correct
+ 
+ Problem 4.1 - Monthly Trends
+
+(1 point possible)
+Lastly, let's see if stocks tend to be higher or lower during certain months. Use the tapply command to calculate the mean stock price of IBM, sorted by months. To sort by months, use
+
+months(IBM$Date)
+
+as the second argument of the tapply function.
+
+For IBM, compare the monthly averages to the overall average stock price. In which months has IBM historically had a higher stock price (on average)? Select all that apply.
+
+```{r}
+with(IBM, tapply(StockPrice, months(Date), mean))
+IBM[, .(MSP = mean(StockPrice)),
+    by = months(Date)][MSP > mean(IBM$StockPrice)]
+
+```
+
+Problem 4.2 - Monthly Trends
+
+(1 point possible)
+Repeat the tapply function from the previous problem for each of the other four companies, and use the output to answer the remaining questions.
+
+General Electric and Coca-Cola both have their highest average stock price in the same month. Which month is this?
+
+```{r}
+with(Boeing, tapply(StockPrice, months(Date), mean))
+Boeing[, .(MSP = mean(StockPrice)),
+    by = months(Date)] #[MSP > mean(Boeing$StockPrice)]
+
+with(CocaCola, tapply(StockPrice, months(Date), mean))
+CocaCola[, .(MSP = mean(StockPrice)),
+    by = months(Date)] #[MSP > mean(CocaCola$StockPrice)]
+
+with(ProcterGamble, tapply(StockPrice, months(Date), mean))
+ProcterGamble[, .(MSP = mean(StockPrice)),
+    by = months(Date)] #[MSP > mean(ProcterGamble$StockPrice)]
+
+with(GE, tapply(StockPrice, months(Date), mean))
+GE[, .(MSP = mean(StockPrice)),
+    by = months(Date)] #[MSP > mean(GE$StockPrice)]
+```
+
+DEMOGRAPHICS AND EMPLOYMENT IN THE UNITED STATES
+
+In the wake of the Great Recession of 2009, there has been a good deal of focus on employment statistics, one of the most important metrics policymakers use to gauge the overall strength of the economy. In the United States, the government measures unemployment using the Current Population Survey (CPS), which collects demographic and employment information from a wide range of Americans each month. In this exercise, we will employ the topics reviewed in the lectures as well as a few new techniques using the September 2013 version of this rich, nationally representative dataset (available online).
+
+The observations in the dataset represent people surveyed in the September 2013 CPS who actually completed a survey. While the full dataset has 385 variables, in this exercise we will use a more compact version of the dataset, CPSData.csv, which has the following variables:
+
+PeopleInHousehold: The number of people in the interviewee's household.
+
+Region: The census region where the interviewee lives.
+
+State: The state where the interviewee lives.
+
+MetroAreaCode: A code that identifies the metropolitan area in which the interviewee lives (missing if the interviewee does not live in a metropolitan area). The mapping from codes to names of metropolitan areas is provided in the file MetroAreaCodes.csv.
+
+Age: The age, in years, of the interviewee. 80 represents people aged 80-84, and 85 represents people aged 85 and higher.
+
+Married: The marriage status of the interviewee.
+
+Sex: The sex of the interviewee.
+
+Education: The maximum level of education obtained by the interviewee.
+
+Race: The race of the interviewee.
+
+Hispanic: Whether the interviewee is of Hispanic ethnicity.
+
+CountryOfBirthCode: A code identifying the country of birth of the interviewee. The mapping from codes to names of countries is provided in the file CountryCodes.csv.
+
+Citizenship: The United States citizenship status of the interviewee.
+
+EmploymentStatus: The status of employment of the interviewee.
+
+Industry: The industry of employment of the interviewee (only available if they are employed).
+
+Problem 1.1 - Loading and Summarizing the Dataset
+
+(1 point possible)
+Load the dataset from CPSData.csv into a data frame called CPS, and view the dataset with the summary() and str() commands.
+
+How many interviewees are in the dataset?
+131302
+
+```{r}
+CPS          <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/CPSData.csv")
+MetroAreaMap <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/MetroAreaCodes.csv") 
+CountryMap   <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/CountryCodes.csv")  
+
+nrow(CPS)
+
+CPS[, .N, by = .(Industry)][order(N)]
+sort(table(CPS$Industry)) 
+
+```
+
+```{r}
+CPS[, .N, by = .(State)][order(-N)]
+sort(table(CPS$State), decreasing = TRUE) 
+
+CPS[, .N, by = .(State)][order(N)]
+sort(table(CPS$State), decreasing = FALSE) 
+```
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.2 - Loading and Summarizing the Dataset
+
+(1 point possible)
+Among the interviewees with a value reported for the Industry variable, what is the most common industry of employment? Please enter the name exactly how you see it.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 1.3 - Loading and Summarizing the Dataset
+
+(2 points possible)
+Recall from the homework assignment "The Analytical Detective" that you can call the sort() function on the output of the table() function to obtain a sorted breakdown of a variable. For instance, sort(table(CPS$Region)) sorts the regions by the number of interviewees from that region.
+
+Which state has the fewest interviewees?
+
+
+ - unanswered  
+Which state has the largest number of interviewees?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.4 - Loading and Summarizing the Dataset
+
+(1 point possible)
+What proportion of interviewees are citizens of the United States?
+
+```{r}
+table(CPS$Citizenship)
+(1-nrow(CPS[Citizenship == "Non-Citizen"])/nrow(CPS))
+```
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.5 - Loading and Summarizing the Dataset
+
+(1 point possible)
+The CPS differentiates between race (with possible values American Indian, Asian, Black, Pacific Islander, White, or Multiracial) and ethnicity. A number of interviewees are of Hispanic ethnicity, as captured by the Hispanic variable. For which races are there at least 250 interviewees in the CPS dataset of Hispanic ethnicity? (Select all that apply.)
+```{r}
+table(CPS[Hispanic == 1]$Race) > 205
+
+```
+
+ American Indian  Asian  Black  Multiracial  Pacific Islander  White
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 2.1 - Evaluating Missing Values
+
+(1 point possible)
+Which variables have at least one interviewee with a missing (NA) value? (Select all that apply.)
+summary(CPS)
+lapply(CPS, function(x){any(is.na(x))})
+
+any(is.na(CPS$PeopleInHousehold))
+any(is.na(CPS$Region))
+any(is.na(CPS$State))
+any(is.na(CPS$MetroAreaCode))
+any(is.na(CPS$Age))
+any(is.na(CPS$Married))
+any(is.na(CPS$Sex))
+any(is.na(CPS$Education))
+any(is.na(CPS$Race))
+any(is.na(CPS$Hispanic))
+any(is.na(CPS$CountryOfBirthCode))
+any(is.na(CPS$Citizenship))
+any(is.na(CPS$EmploymentStatus))
+any(is.na(CPS$Industry))
+
+
+ PeopleInHousehold  Region  State  MetroAreaCode  Age  Married  Sex  Education  Race  Hispanic  CountryOfBirthCode  Citizenship  EmploymentStatus  Industry
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 2.2 - Evaluating Missing Values
+
+(1 point possible)
+Often when evaluating a new dataset, we try to identify if there is a pattern in the missing values in the dataset. We will try to determine if there is a pattern in the missing values of the Married variable. The function is.na(CPS$Married) returns a vector of TRUE/FALSE values for whether the Married variable is missing. We can see the breakdown of whether Married is missing based on the reported value of the Region variable with the function table(CPS$Region, is.na(CPS$Married)). Which is the most accurate:
+
+```{r}
+table(CPS$Region     , is.na(CPS$Married))
+table(CPS$Sex        , is.na(CPS$Married))
+table(CPS$Age        , is.na(CPS$Married))
+table(CPS$Citizenship, is.na(CPS$Married))
+```
+
+
+ The Married variable being missing is related to the Region value for the interviewee.  The Married variable being missing is related to the Sex value for the interviewee.  The Married variable being missing is related to the Age value for the interviewee.  The Married variable being missing is related to the Citizenship value for the interviewee.  The Married variable being missing is not related to the Region, Sex, Age, or Citizenship value for the interviewee.
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 2.3 - Evaluating Missing Values
+
+(2 points possible)
+As mentioned in the variable descriptions, MetroAreaCode is missing if an interviewee does not live in a metropolitan area. Using the same technique as in the previous question, answer the following questions about people who live in non-metropolitan areas.
+
+How many states had all interviewees living in a non-metropolitan area (aka they have a missing MetroAreaCode value)? For this question, treat the District of Columbia as a state (even though it is not technically a state).
+
+```{r}
+DF <- as.data.frame(with(CPS, table(State     , is.na(MetroAreaCode))))
+DT <- CPS[, .N, by =.(Region, M = ifelse(is.na(MetroAreaCode), "YES", "NO"))]
+DT <- dcast(DT, Region ~ M, fun=sum, value.var = "N")
+DT <- DT[, .(Region, YES, NO, PROP = (YES / (YES+NO))) ]
+
+with(CPS, (table(Region, is.na(MetroAreaCode))))
+with(CPS, tapply(is.na(MetroAreaCode), Region, mean))
+```
+
+ - unanswered  
+How many states had all interviewees living in a metropolitan area? Again, treat the District of Columbia as a state.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.4 - Evaluating Missing Values
+
+(1 point possible)
+Which region of the United States has the largest proportion of interviewees living in a non-metropolitan area?
+
+ Midwest  Northeast  South  West
+
+```{r}
+with(CPS, (table(Region, is.na(MetroAreaCode))))
+with(CPS, tapply(is.na(MetroAreaCode), Region, mean))
+```
+
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.5 - Evaluating Missing Values
+
+(4 points possible)
+While we were able to use the table() command to compute the proportion of interviewees from each region not living in a metropolitan area, it was somewhat tedious (it involved manually computing the proportion for each region) and isn't something you would want to do if there were a larger number of options. It turns out there is a less tedious way to compute the proportion of values that are TRUE. The mean() function, which takes the average of the values passed to it, will treat TRUE as 1 and FALSE as 0, meaning it returns the proportion of values that are true. For instance, mean(c(TRUE, FALSE, TRUE, TRUE)) returns 0.75. Knowing this, use tapply() with the mean function to answer the following questions:
+
+Which state has a proportion of interviewees living in a non-metropolitan area closest to 30%?
+```{r}
+with(CPS, (table(State, is.na(MetroAreaCode))))
+with(CPS, tapply(is.na(MetroAreaCode), State, mean))
+sort(with(CPS, tapply(is.na(MetroAreaCode), State, mean)))
+
+```
+
+
+ - unanswered  
+Which state has the largest proportion of non-metropolitan interviewees, ignoring states where all interviewees were non-metropolitan?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 4 submissions
+Problem 3.1 - Integrating Metropolitan Area Data
+
+(2 points possible)
+Codes like MetroAreaCode and CountryOfBirthCode are a compact way to encode factor variables with text as their possible values, and they are therefore quite common in survey datasets. In fact, all but one of the variables in this dataset were actually stored by a numeric code in the original CPS datafile.
+
+When analyzing a variable stored by a numeric code, we will often want to convert it into the values the codes represent. To do this, we will use a dictionary, which maps the the code to the actual value of the variable. We have provided dictionaries MetroAreaCodes.csv and CountryCodes.csv, which respectively map MetroAreaCode and CountryOfBirthCode into their true values. Read these two dictionaries into data frames MetroAreaMap and CountryMap.
+
+How many observations (codes for metropolitan areas) are there in MetroAreaMap?
+
+
+ - unanswered  
+How many observations (codes for countries) are there in CountryMap?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.2 - Integrating Metropolitan Area Data
+
+(2 points possible)
+To merge in the metropolitan areas, we want to connect the field MetroAreaCode from the CPS data frame with the field Code in MetroAreaMap. The following command merges the two data frames on these columns, overwriting the CPS data frame with the result:
+
+CPS = merge(CPS, MetroAreaMap, by.x="MetroAreaCode", by.y="Code", all.x=TRUE)
+
+The first two arguments determine the data frames to be merged (they are called "x" and "y", respectively, in the subsequent parameters to the merge function). by.x="MetroAreaCode" means we're matching on the MetroAreaCode variable from the "x" data frame (CPS), while by.y="Code" means we're matching on the Code variable from the "y" data frame (MetroAreaMap). Finally, all.x=TRUE means we want to keep all rows from the "x" data frame (CPS), even if some of the rows' MetroAreaCode doesn't match any codes in MetroAreaMap (for those familiar with database terminology, this parameter makes the operation a left outer join instead of an inner join).
+
+Review the new version of the CPS data frame with the summary() and str() functions. What is the name of the variable that was added to the data frame by the merge() operation?
+```{r}
+CPS = merge(CPS, MetroAreaMap, by.x="MetroAreaCode", by.y="Code", all.x=TRUE)
+table(CPS$MetroArea, useNA = "always")
+```
+
+
+ - unanswered  
+How many interviewees have a missing value for the new metropolitan area variable? Note that all of these interviewees would have been removed from the merged data frame if we did not include the all.x=TRUE parameter.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.3 - Integrating Metropolitan Area Data
+
+(1 point possible)
+Which of the following metropolitan areas has the largest number of interviewees?
+```{r}
+sort(table(CPS$MetroArea, useNA = "no"))
+```
+
+ Atlanta-Sandy Springs-Marietta, GA  Baltimore-Towson, MD  Boston-Cambridge-Quincy, MA-NH  San Francisco-Oakland-Fremont, CA
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.4 - Integrating Metropolitan Area Data
+
+(2 points possible)
+Which metropolitan area has the highest proportion of interviewees of Hispanic ethnicity? Hint: Use tapply() with mean, as in the previous subproblem. Calling sort() on the output of tapply() could also be helpful here.
+```{r}
+sort(tapply(CPS$Hispanic, CPS$MetroArea, mean))
+```
+
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 5 submissions
+Problem 3.5 - Integrating Metropolitan Area Data
+
+(2 points possible)
+Remembering that CPS$Race == "Asian" returns a TRUE/FALSE vector of whether an interviewee is Asian, determine the number of metropolitan areas in the United States from which at least 20% of interviewees are Asian.
+```{r}
+sort(tapply(CPS$Race == "Asian", CPS$MetroArea, mean ))
+```
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 5 submissions
+Problem 3.6 - Integrating Metropolitan Area Data
+
+(1 point possible)
+Normally, we would look at the sorted proportion of interviewees from each metropolitan area who have not received a high school diploma with the command:
+
+sort(tapply(CPS$Education == "No high school diploma", CPS$MetroArea, mean))
+
+However, none of the interviewees aged 14 and younger have an education value reported, so the mean value is reported as NA for each metropolitan area. To get mean (and related functions, like sum) to ignore missing values, you can pass the parameter na.rm=TRUE. Passing na.rm=TRUE to the tapply function, determine which metropolitan area has the smallest proportion of interviewees who have received no high school diploma.
+
+```{r}
+sort(tapply(CPS$Education == "No high school diploma", CPS$MetroArea, mean, na.rm=TRUE))
+```
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.1 - Integrating Country of Birth Data
+
+(2 points possible)
+Just as we did with the metropolitan area information, merge in the country of birth information from the CountryMap data frame, replacing the CPS data frame with the result. If you accidentally overwrite CPS with the wrong values, remember that you can restore it by re-loading the data frame from CPSData.csv and then merging in the metropolitan area information using the command provided in the previous subproblem.
+
+What is the name of the variable added to the CPS data frame by this merge operation?
+
+```{r}
+CPS = merge(CPS, CountryMap, by.x="CountryOfBirthCode", by.y="Code", all.x=TRUE)
+table(CPS$Country, useNA = "always")
+```
+
+ - unanswered  
+How many interviewees have a missing value for the new country of birth variable?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.2 - Integrating Country of Birth Data
+
+(2 points possible)
+Among all interviewees born outside of North America, which country was the most common place of birth?
+
+```{r}
+sort(table(CPS$Country, useNA = "always"))
+```
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 5 submissions
+Problem 4.3 - Integrating Country of Birth Data
+
+(2 points possible)
+What proportion of the interviewees from the "New York-Northern New Jersey-Long Island, NY-NJ-PA" metropolitan area have a country of birth that is not the United States? For this computation, don't include people from this metropolitan area who have a missing country of birth.
+```{r}
+with(CPS, tapply(Country != "United States", MetroArea , mean, na.rm = TRUE))
+sort(with(CPS, tapply(Country == "India"  , MetroArea , sum, na.rm = TRUE)))
+sort(with(CPS, tapply(Country == "Brazil" , MetroArea , sum, na.rm = TRUE)))
+sort(with(CPS, tapply(Country == "Somalia", MetroArea , sum, na.rm = TRUE)))
+
+```
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 5 submissions
+Problem 4.4 - Integrating Country of Birth Data
+
+(3 points possible)
+Which metropolitan area has the largest number (note -- not proportion) of interviewees with a country of birth in India? Hint -- remember to include na.rm=TRUE if you are using tapply() to answer this question.
+
+ Boston-Cambridge-Quincy, MA-NH  Minneapolis-St Paul-Bloomington, MN-WI  New York-Northern New Jersey-Long Island, NY-NJ-PA  Washington-Arlington-Alexandria, DC-VA-MD-WV
+- This answer is unanswered.
+In Brazil?
+
+ Boston-Cambridge-Quincy, MA-NH  Minneapolis-St Paul-Bloomington, MN-WI  New York-Northern New Jersey-Long Island, NY-NJ-PA  Washington-Arlington-Alexandria, DC-VA-MD-WV
+- This answer is unanswered.
+In Somalia?
+
+ Boston-Cambridge-Quincy, MA-NH  Minneapolis-St Paul-Bloomington, MN-WI  New York-Northern New Jersey-Long Island, NY-NJ-PA  Washington-Arlington-Alexandria, DC-VA-MD-WV
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+ 
+
+Please remember not to ask for or post complete answers to homework questions in this discussion forum.
+
+IMPORTANT NOTE: This problem is optional, and will not count towards your grade. We have created this problem to give you extra practice with the topics covered in this unit.
+
+INTERNET PRIVACY POLL (OPTIONAL)
+
+Internet privacy has gained widespread attention in recent years. To measure the degree to which people are concerned about hot-button issues like Internet privacy, social scientists conduct polls in which they interview a large number of people about the topic. In this assignment, we will analyze data from a July 2013 Pew Internet and American Life Project poll on Internet anonymity and privacy, which involved interviews across the United States. While the full polling data can be found here, we will use a more limited version of the results, available in AnonymityPoll.csv. The dataset has the following fields (all Internet use-related fields were only collected from interviewees who either use the Internet or have a smartphone):
+
+Internet.Use: A binary variable indicating if the interviewee uses the Internet, at least occasionally (equals 1 if the interviewee uses the Internet, and equals 0 if the interviewee does not use the Internet).
+Smartphone: A binary variable indicating if the interviewee has a smartphone (equals 1 if they do have a smartphone, and equals 0 if they don't have a smartphone).
+Sex: Male or Female.
+Age: Age in years.
+State: State of residence of the interviewee.
+Region: Census region of the interviewee (Midwest, Northeast, South, or West).
+Conservativeness: Self-described level of conservativeness of interviewee, from 1 (very liberal) to 5 (very conservative).
+Info.On.Internet: Number of the following items this interviewee believes to be available on the Internet for others to see: (1) Their email address; (2) Their home address; (3) Their home phone number; (4) Their cell phone number; (5) The employer/company they work for; (6) Their political party or political affiliation; (7) Things they've written that have their name on it; (8) A photo of them; (9) A video of them; (10) Which groups or organizations they belong to; and (11) Their birth date.
+Worry.About.Info: A binary variable indicating if the interviewee worries about how much information is available about them on the Internet (equals 1 if they worry, and equals 0 if they don't worry).
+Privacy.Importance: A score from 0 (privacy is not too important) to 100 (privacy is very important), which combines the degree to which they find privacy important in the following: (1) The websites they browse; (2) Knowledge of the place they are located when they use the Internet; (3) The content and files they download; (4) The times of day they are online; (5) The applications or programs they use; (6) The searches they perform; (7) The content of their email; (8) The people they exchange email with; and (9) The content of their online chats or hangouts with others.
+Anonymity.Possible: A binary variable indicating if the interviewee thinks it's possible to use the Internet anonymously, meaning in such a way that online activities can't be traced back to them (equals 1 if he/she believes you can, and equals 0 if he/she believes you can't).
+Tried.Masking.Identity: A binary variable indicating if the interviewee has ever tried to mask his/her identity when using the Internet (equals 1 if he/she has tried to mask his/her identity, and equals 0 if he/she has not tried to mask his/her identity).
+Privacy.Laws.Effective: A binary variable indicating if the interviewee believes United States law provides reasonable privacy protection for Internet users (equals 1 if he/she believes it does, and equals 0 if he/she believes it doesn't).
+Problem 1.1 - Loading and Summarizing the Dataset
+
+Using read.csv(), load the dataset from AnonymityPoll.csv into a data frame called poll and summarize it with the summary() and str() functions.
+
+How many people participated in the poll?
+```{r}
+poll <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/AnonymityPoll.csv")
+```
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.2 - Loading and Summarizing the Dataset
+
+Let's look at the breakdown of the number of people with smartphones using the table() and summary() commands on the Smartphone variable. (HINT: These three numbers should sum to 1002.)
+
+How many interviewees responded that they use a smartphone?
+
+
+ - unanswered  
+How many interviewees responded that they don't use a smartphone?
+
+
+ - unanswered  
+How many interviewees did not respond to the question, resulting in a missing value, or NA, in the summary() output?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.3 - Loading and Summarizing the Dataset
+
+By using the table() function on two variables, we can tell how they are related. To use the table() function on two variables, just put the two variable names inside the parentheses, separated by a comma (don't forget to add poll$ before each variable name). In the output, the possible values of the first variable will be listed in the left, and the possible values of the second variable will be listed on the top. Each entry of the table counts the number of observations in the data set that have the value of the first value in that row, and the value of the second variable in that column. For example, suppose we want to create a table of the variables "Sex" and "Region". We would type
+
+table(poll$Sex, poll$Region)
+
+in our R Console, and we would get as output
+
+Midwest Northeast South West
+
+Female 123 90 176 116
+
+Male 116 76 183 122
+
+This table tells us that we have 123 people in our dataset who are female and from the Midwest, 116 people in our dataset who are male and from the Midwest, 90 people in our dataset who are female and from the Northeast, etc.
+
+You might find it helpful to use the table() function to answer the following questions:
+
+Which of the following are states in the Midwest census region? (Select all that apply.)
+
+ Colorado  Kansas  Kentucky  Missouri  Ohio  Pennsylvania
+- This answer is unanswered.
+Which was the state in the South census region with the largest number of interviewees?
+
+ 
+- This answer is unanswered. 
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 2.1 - Internet and Smartphone Users
+
+As mentioned in the introduction to this problem, many of the response variables (Info.On.Internet, Worry.About.Info, Privacy.Importance, Anonymity.Possible, and Tried.Masking.Identity) were not collected if an interviewee does not use the Internet or a smartphone, meaning the variables will have missing values for these interviewees.
+
+How many interviewees reported not having used the Internet and not having used a smartphone?
+
+
+ - unanswered  
+How many interviewees reported having used the Internet and having used a smartphone?
+
+
+ - unanswered  
+How many interviewees reported having used the Internet but not having used a smartphone?
+
+
+ - unanswered  
+How many interviewees reported having used a smartphone but not having used the Internet?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.2 - Internet and Smartphone Users
+
+How many interviewees have a missing value for their Internet use?
+
+
+ - unanswered  
+How many interviewees have a missing value for their smartphone use?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.3 - Internet and Smartphone Users
+
+Use the subset function to obtain a data frame called "limited", which is limited to interviewees who reported Internet use or who reported smartphone use. In lecture, we used the & symbol to use two criteria to make a subset of the data. To only take observations that have a certain value in one variable or the other, the | character can be used in place of the & symbol. This is also called a logical "or" operation.
+
+How many interviewees are in the new data frame?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Important: For all remaining questions in this assignment please use the limited data frame you created in Problem 2.3.
+
+Problem 3.1 - Summarizing Opinions about Internet Privacy
+
+Which variables have missing values in the limited data frame? (Select all that apply.)
+
+ Internet.Use  Smartphone  Sex  Age  State  Region  Conservativeness  Info.On.Internet  Worry.About.Info  Privacy.Importance  Anonymity.Possible  Tried.Masking.Identity  Privacy.Laws.Effective
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 3.2 - Summarizing Opinions about Internet Privacy
+
+What is the average number of pieces of personal information on the Internet, according to the Info.On.Internet variable?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.3 - Summarizing Opinions about Internet Privacy
+
+How many interviewees reported a value of 0 for Info.On.Internet?
+
+
+ - unanswered  
+How many interviewees reported the maximum value of 11 for Info.On.Internet?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.4 - Summarizing Opinions about Internet Privacy
+
+What proportion of interviewees who answered the Worry.About.Info question worry about how much information is available about them on the Internet? Note that to compute this proportion you will be dividing by the number of people who answered the Worry.About.Info question, not the total number of people in the data frame.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.5 - Summarizing Opinions about Internet Privacy
+
+What proportion of interviewees who answered the Anonymity.Possible question think it is possible to be completely anonymous on the Internet?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.6 - Summarizing Opinions about Internet Privacy
+
+What proportion of interviewees who answered the Tried.Masking.Identity question have tried masking their identity on the Internet?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.7 - Summarizing Opinions about Internet Privacy
+
+What proportion of interviewees who answered the Privacy.Laws.Effective question find United States privacy laws effective?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.1 - Relating Demographics to Polling Results
+
+Often, we are interested in whether certain characteristics of interviewees (e.g. their age or political opinions) affect their opinions on the topic of the poll (in this case, opinions on privacy). In this section, we will investigate the relationship between the characteristics Age and Smartphone and outcome variables Info.On.Internet and Tried.Masking.Identity, again using the limited data frame we built in an earlier section of this problem.
+
+Build a histogram of the age of interviewees. What is the best represented age group in the population?
+
+ People aged about 20 years old  People aged about 40 years old  People aged about 60 years old  People aged about 80 years old
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 4.2 - Relating Demographics to Polling Results
+
+Both Age and Info.On.Internet are variables that take on many values, so a good way to observe their relationship is through a graph. We learned in lecture that we can plot Age against Info.On.Internet with the command plot(limited$Age, limited$Info.On.Internet). However, because Info.On.Internet takes on a small number of values, multiple points can be plotted in exactly the same location on this graph.
+
+What is the largest number of interviewees that have exactly the same value in their Age variable AND the same value in their Info.On.Internet variable? In other words, what is the largest number of overlapping points in the plot plot(limited$Age, limited$Info.On.Internet)? (HINT: Use the table function to compare the number of observations with different values of Age and Info.On.Internet.)
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.3 - Relating Demographics to Polling Results
+
+To avoid points covering each other up, we can use the jitter() function on the values we pass to the plot function. Experimenting with the command jitter(c(1, 2, 3)), what appears to be the functionality of the jitter command?
+
+ jitter randomly reorders the values passed to it, and two runs will yield the same result  jitter randomly reorders the values passed to it, and two runs will yield different results  jitter adds or subtracts a small amount of random noise to the values passed to it, and two runs will yield the same result  jitter adds or subtracts a small amount of random noise to the values passed to it, and two runs will yield different results
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 4.4 - Relating Demographics to Polling Results
+
+Now, plot Age against Info.On.Internet with plot(jitter(limited$Age), jitter(limited$Info.On.Internet)). What relationship to you observe between Age and Info.On.Internet?
+
+ Older age seems strongly associated with a larger value for Info.On.Internet  Older age seems moderately associated with a larger value for Info.On.Internet  Older age does not seem associated with a change in the value of Info.On.Internet  Older age seems moderately associated with a smaller value for Info.On.Internet  Older age seems strongly associated with a smaller value for Info.On.Internet
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 4.5 - Relating Demographics to Polling Results
+
+Use the tapply() function to obtain the summary of the Info.On.Internet value, broken down by whether an interviewee is a smartphone user.
+
+What is the average Info.On.Internet value for smartphone users?
+
+
+ - unanswered  
+What is the average Info.On.Internet value for non-smartphone users?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.6 - Relating Demographics to Polling Results
+
+Similarly use tapply to break down the Tried.Masking.Identity variable for smartphone and non-smartphone users.
+
+What proportion of smartphone users who answered the Tried.Masking.Identity question have tried masking their identity when using the Internet?
+
+
+ - unanswered  
+What proportion of non-smartphone users who answered the Tried.Masking.Identity question have tried masking their identity when using the Internet?
+
+
+ - unanswered  
+Next week, we will begin to more formally characterize how an outcome variable like Info.On.Internet can be predicted with a variable like Age or Smartphone.
+
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+ 
+
+Please remember not to ask for or post complete answers to homework questions in this discussion forum.

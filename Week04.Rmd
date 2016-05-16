@@ -1,0 +1,120 @@
+---
+title: "MITx 15.071x - Week04 "
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+Sys.setlocale("LC_ALL", "C")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# Data Settings
+
+pPath     <- "./60_Results" 
+pXLSX     <- paste0("MITx_Week04") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(PROJECT = "MITx_Week04"), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+
+```
+
+```{r SupremeCourt}
+library(caTools) # to split 
+library(rpart)
+library(rpart.plot)
+library(ROCR)
+set.seed(3000)
+
+stevens <- fread("https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/stevens.csv")
+str(stevens)
+
+spl <- sample.split(stevens$Reverse, SplitRatio = 0.7)
+Train <- subset(stevens, spl == TRUE)
+Test  <- subset(stevens, spl == FALSE)
+
+stevensTree <- rpart(Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst, data = Train, method = "class", minbucket = 25 )
+prp(stevensTree)
+predictCart <- predict(stevensTree, newdata=Test, type = "class")
+table(Test$Reverse, predictCart)
+
+M1 <- as.matrix(table(Test$Reverse, predictCart))
+sum(M1[1, 1] + M1[2, 2])/ nrow(Test)
+
+predictROC <- predict(stevensTree, newdata=Test)
+pred <- prediction(predictROC[,2], Test$Reverse)
+perf <- performance(pred, "tpr", "fpr")
+plot(perf)
+
+```
+
+
+```{r D2Hawkeye}
+# install.packages("caTools")
+library(caTools) # to split 
+library(rpart)
+library(rpart.plot)
+
+
+Claims <- fread("./data/raw/ClaimsData.csv")
+str(Claims)
+summary(Claims)
+table(Claims$bucket2009)/nrow(Claims)
+set.seed(88)
+
+spl <- sample.split(Claims$bucket2009, SplitRatio = 0.6)
+ClaimsTrain <- subset(Claims, spl == TRUE)
+ClaimsTest  <- subset(Claims, spl == FALSE)
+
+# Baseline Method
+# Cost bucket 2009 the same as 2008
+
+M1 <- as.matrix(table(ClaimsTest$bucket2009, ClaimsTest$bucket2008))
+sum(M1[1, 1] + M1[2, 2] + M1[3, 3] + M1[4, 4] + M1[5, 5])/ nrow(ClaimsTest)
+
+PenaltyMatrix <-  matrix(c(0,1,2,3,4,2,0,1,2,3,4,2,0,1,2,6,4,2,0,1,8,6,4,2,0), byrow= TRUE, nrow=5)
+sum(as.matrix(table(ClaimsTest$bucket2009, ClaimsTest$bucket2008))* PenaltyMatrix)
+Predict <- rep(1, length(ClaimsTest$bucket2008))
+sum(as.matrix((t(table(ClaimsTest$bucket2009, Predict))))* (PenaltyMatrix[,1]))/ nrow(ClaimsTest)
+
+ClaimsTree <- rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + reimbursement2008 + bucket2008, data = ClaimsTrain, method = "class", cp = 0.00005)
+prp(ClaimsTree)
+PredictTest <- predict(ClaimsTree, newdata = ClaimsTest, type="class")
+M1 <- as.matrix(table(ClaimsTest$bucket2009, PredictTest))
+sum(M1[1, 1] + M1[2, 2] + M1[3, 3] + M1[4, 4] + M1[5, 5])/ nrow(ClaimsTest)
+sum(as.matrix(table(ClaimsTest$bucket2009, PredictTest))* PenaltyMatrix)/nrow(ClaimsTest)
+
+ClaimsTree <- rpart(bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + reimbursement2008 + bucket2008, data = ClaimsTrain, method = "class", cp = 0.00005, parms = list(loss = PenaltyMatrix))
+prp(ClaimsTree)
+PredictTest <- predict(ClaimsTree, newdata = ClaimsTest, type="class")
+M1 <- as.matrix(table(ClaimsTest$bucket2009, PredictTest))
+sum(M1[1, 1] + M1[2, 2] + M1[3, 3] + M1[4, 4] + M1[5, 5])/ nrow(ClaimsTest)
+sum(as.matrix(table(ClaimsTest$bucket2009, PredictTest))* PenaltyMatrix)/nrow(ClaimsTest)
+```
+
