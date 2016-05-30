@@ -302,9 +302,12 @@ Problem 1.1 - Normalizing the Data
 Read the dataset AirlinesCluster.csv into R and call it "airlines".
 
 ```{r}
+library(data.table)
+
 airlines <- as.data.frame(fread("https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/AirlinesCluster.csv"))
 
 summary(airlines)
+
 
 ```
 
@@ -339,6 +342,31 @@ preproc = preProcess(airlines)
 
 airlinesNorm = predict(preproc, airlines)
 
+summary(airlinesNorm)
+
+# Compute distances
+distances <- dist(x = airlinesNorm, method="euclidean")
+
+# Hierarchical clustering
+clusterAIR = hclust(distances, method = "ward.D") 
+
+# Plot the dendrogram
+plot(clusterAIR)
+
+# Assign points to clusters
+clusterGroups = cutree(clusterAIR, k = 5)
+
+spl = split(airlinesNorm, clusterGroups)
+lapply(spl, nrow)
+
+spl = split(airlines, clusterGroups)
+lapply(spl, colMeans)
+
+tail(sort(colMeans(spl[[1]])))
+aw <- function(x){
+  tail(sort(colMeans(x)))
+}
+lapply(spl, aw)
 ```
 
 Now, create a normalized data frame called "airlinesNorm" by running the following commands:
@@ -461,3 +489,547 @@ Do you expect Cluster 1 of the K-Means clustering output to necessarily be simil
 - This answer is unanswered.
 FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
 Please remember not to ask for or post complete answers to homework questions in this discussion forum.
+
+
+
+
+Predicting Stock Returns with Cluster-Then-Predict
+
+In the second lecture sequence this week, we heard about cluster-then-predict, a methodology in which you first cluster observations and then build cluster-specific prediction models. In the lecture sequence, we saw how this methodology helped improve the prediction of heart attack risk. In this assignment, we'll use cluster-then-predict to predict future stock prices using historical stock data.
+
+When selecting which stocks to invest in, investors seek to obtain good future returns. In this problem, we will first use clustering to identify clusters of stocks that have similar returns over time. Then, we'll use logistic regression to predict whether or not the stocks will have positive future returns.
+
+For this problem, we'll use StocksCluster.csv, which contains monthly stock returns from the NASDAQ stock exchange. The NASDAQ is the second-largest stock exchange in the world, and it lists many technology companies. The stock price data used in this problem was obtained from infochimps, a website providing access to many datasets.
+
+Each observation in the dataset is the monthly returns of a particular company in a particular year. The years included are 2000-2009. The companies are limited to tickers that were listed on the exchange for the entire period 2000-2009, and whose stock price never fell below $1. So, for example, one observation is for Yahoo in 2000, and another observation is for Yahoo in 2001. Our goal will be to predict whether or not the stock return in December will be positive, using the stock returns for the first 11 months of the year.
+
+This dataset contains the following variables:
+•ReturnJan = the return for the company's stock during January (in the year of the observation). 
+•ReturnFeb = the return for the company's stock during February (in the year of the observation). 
+•ReturnMar = the return for the company's stock during March (in the year of the observation). 
+•ReturnApr = the return for the company's stock during April (in the year of the observation). 
+•ReturnMay = the return for the company's stock during May (in the year of the observation). 
+•ReturnJune = the return for the company's stock during June (in the year of the observation). 
+•ReturnJuly = the return for the company's stock during July (in the year of the observation). 
+•ReturnAug = the return for the company's stock during August (in the year of the observation). 
+•ReturnSep = the return for the company's stock during September (in the year of the observation). 
+•ReturnOct = the return for the company's stock during October (in the year of the observation). 
+•ReturnNov = the return for the company's stock during November (in the year of the observation). 
+•PositiveDec = whether or not the company's stock had a positive return in December (in the year of the observation). This variable takes value 1 if the return was positive, and value 0 if the return was not positive.
+
+For the first 11 variables, the value stored is a proportional change in stock value during that month. For instance, a value of 0.05 means the stock increased in value 5% during the month, while a value of -0.02 means the stock decreased in value 2% during the month.
+
+
+
+
+Problem 1.1 - Exploring the Dataset 
+
+(1 point possible)
+ 
+
+
+
+Load StocksCluster.csv into a data frame called "stocks". How many observations are in the dataset?
+
+```{r}
+stocks <- fread("https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/StocksCluster.csv")
+
+mean(stocks$PositiveDec)
+(cor(stocks[, names(stocks)[1:11], with=FALSE]))
+
+colMeans(stocks)
+```
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 1.2 - Exploring the Dataset 
+
+(1 point possible)
+ 
+
+
+
+What proportion of the observations have positive returns in December?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 1.3 - Exploring the Dataset 
+
+(1 point possible)
+ 
+
+
+
+What is the maximum correlation between any two return variables in the dataset? You should look at the pairwise correlations between ReturnJan, ReturnFeb, ReturnMar, ReturnApr, ReturnMay, ReturnJune, ReturnJuly, ReturnAug, ReturnSep, ReturnOct, and ReturnNov.
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 1.4 - Exploring the Dataset 
+
+(2 points possible)
+ 
+
+
+
+Which month (from January through November) has the largest mean return across all observations in the dataset? 
+
+
+ January February March April May June July August September October November  
+
+- This answer is unanswered. 
+ 
+Answer: 
+ 
+Which month (from January through November) has the smallest mean return across all observations in the dataset?
+
+
+ January February March April May June July August September October November  
+
+- This answer is unanswered. 
+ 
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 2.1 - Initial Logistic Regression Model 
+
+(2 points possible)
+ 
+
+
+
+Run the following commands to split the data into a training set and testing set, putting 70% of the data in the training set and 30% of the data in the testing set:
+
+set.seed(144)
+
+spl = sample.split(stocks$PositiveDec, SplitRatio = 0.7)
+
+stocksTrain = subset(stocks, spl == TRUE)
+
+stocksTest = subset(stocks, spl == FALSE)
+
+Then, use the stocksTrain data frame to train a logistic regression model (name it StocksModel) to predict PositiveDec using all the other variables as independent variables. Don't forget to add the argument family=binomial to your glm command.
+
+What is the overall accuracy on the training set, using a threshold of 0.5?
+
+```{r}
+library(caTools)
+set.seed(144)
+
+spl = sample.split(stocks$PositiveDec, SplitRatio = 0.7)
+
+stocksTrain = subset(stocks, spl == TRUE)
+stocksTest  = subset(stocks, spl == FALSE)
+
+StocksModel <- glm(PositiveDec ~ ., data=stocksTrain, family = binomial )
+
+summary(StocksModel)
+
+predictTrain <- predict(StocksModel, type = "response")
+summary(predictTrain)
+tapply(predictTrain, stocksTrain$PositiveDec, mean)
+table(stocksTrain$PositiveDec, predictTrain > 0.5)
+(990+3640)/(990+ 2689+ 787+ 3640)
+
+predictTest = predict(StocksModel, type="response", newdata=stocksTest)
+tapply(predictTest, stocksTest$PositiveDec, mean)
+table(stocksTest$PositiveDec, predictTest > 0.5)
+(417+1553)/(417+1553+1160+344)
+
+table(rep(1,3474),stocksTest$PositiveDec)
+1897/(1897+1577)
+# 
+# ROCRpredTest = prediction(predictTest, qualityTest$PoorCare)
+# auc = as.numeric(performance(ROCRpredTest, "auc")@y.values)
+
+```
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 5 submissions 
+ 
+
+
+
+Problem 2.2 - Initial Logistic Regression Model 
+
+(1 point possible)
+ 
+
+
+
+Now obtain test set predictions from StocksModel. What is the overall accuracy of the model on the test, again using a threshold of 0.5?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 2.3 - Initial Logistic Regression Model 
+
+(1 point possible)
+ 
+
+
+
+What is the accuracy on the test set of a baseline model that always predicts the most common outcome (PositiveDec = 1)?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 3.1 - Clustering Stocks 
+
+(1 point possible)
+ 
+
+
+
+Now, let's cluster the stocks. The first step in this process is to remove the dependent variable using the following commands:
+
+limitedTrain = stocksTrain
+
+limitedTrain$PositiveDec = NULL
+
+limitedTest = stocksTest
+
+limitedTest$PositiveDec = NULL
+
+Why do we need to remove the dependent variable in the clustering phase of the cluster-then-predict methodology?
+
+```{r}
+limitedTrain             <-  stocksTrain
+limitedTrain$PositiveDec <-  NULL
+
+limitedTest              <-  stocksTest
+limitedTest$PositiveDec  <-  NULL
+
+library(caret)
+
+preproc   <-  preProcess(limitedTrain)
+normTrain <-  predict(preproc, limitedTrain)
+normTest  <-  predict(preproc, limitedTest)
+
+colMeans(normTrain)
+colMeans(normTest)
+```
+
+
+ Leaving in the dependent variable might lead to unbalanced clusters   Removing the dependent variable decreases the computational effort needed to cluster   Needing to know the dependent variable value to assign an observation to a cluster defeats the purpose of the methodology   
+
+
+- This answer is unanswered.  
+ 
+
+
+Final Checkyour answer Saveyour answer 
+You have used 0 of 1 submissions 
+ 
+
+
+
+Problem 3.2 - Clustering Stocks 
+
+(2 points possible)
+ 
+
+
+
+In the market segmentation assignment in this week's homework, you were introduced to the preProcess command from the caret package, which normalizes variables by subtracting by the mean and dividing by the standard deviation.
+
+In cases where we have a training and testing set, we'll want to normalize by the mean and standard deviation of the variables in the training set. We can do this by passing just the training set to the preProcess function:
+
+library(caret)
+
+preproc = preProcess(limitedTrain)
+
+normTrain = predict(preproc, limitedTrain)
+
+normTest = predict(preproc, limitedTest)
+
+What is the mean of the ReturnJan variable in normTrain?
+
+
+
+ - unanswered   
+Answer: 
+ 
+What is the mean of the ReturnJan variable in normTest?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 3.3 - Clustering Stocks 
+
+(1 point possible)
+ 
+
+
+
+Why is the mean ReturnJan variable much closer to 0 in normTrain than in normTest?
+
+
+
+ Small rounding errors exist in the normalization procedure   The distribution of the ReturnJan variable is different in the training and testing set   The distribution of the dependent variable is different in the training and testing set   
+
+
+- This answer is unanswered.  
+ 
+
+
+Final Checkyour answer Saveyour answer 
+You have used 0 of 1 submissions 
+ 
+
+
+
+Problem 3.4 - Clustering Stocks 
+
+(1 point possible)
+ 
+
+
+
+Set the random seed to 144 (it is important to do this again, even though we did it earlier). Run k-means clustering with 3 clusters on normTrain, storing the result in an object called km.
+
+Which cluster has the largest number of observations?
+
+
+
+ Cluster 1   Cluster 2   Cluster 3   
+
+
+- This answer is unanswered.  
+ 
+
+
+Final Checkyour answer Saveyour answer 
+You have used 0 of 1 submissions 
+ 
+
+
+
+Problem 3.5 - Clustering Stocks 
+
+(1 point possible)
+ 
+
+
+
+Recall from the recitation that we can use the flexclust package to obtain training set and testing set cluster assignments for our observations (note that the call to as.kcca may take a while to complete):
+
+library(flexclust)
+
+km.kcca = as.kcca(km, normTrain)
+
+clusterTrain = predict(km.kcca)
+
+clusterTest = predict(km.kcca, newdata=normTest)
+
+How many test-set observations were assigned to Cluster 2?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 4.1 - Cluster-Specific Predictions 
+
+(1 point possible)
+ 
+
+
+
+Using the subset function, build data frames stocksTrain1, stocksTrain2, and stocksTrain3, containing the elements in the stocksTrain data frame assigned to clusters 1, 2, and 3, respectively (be careful to take subsets of stocksTrain, not of normTrain). Similarly build stocksTest1, stocksTest2, and stocksTest3 from the stocksTest data frame.
+
+Which training set data frame has the highest average value of the dependent variable?
+
+
+
+ stocksTrain1   stocksTrain2   stocksTrain3   
+
+
+- This answer is unanswered.  
+ 
+
+
+Final Checkyour answer Saveyour answer 
+You have used 0 of 1 submissions 
+ 
+
+
+
+Problem 4.2 - Cluster-Specific Predictions 
+
+(2 points possible)
+ 
+
+
+
+Build logistic regression models StocksModel1, StocksModel2, and StocksModel3, which predict PositiveDec using all the other variables as independent variables. StocksModel1 should be trained on stocksTrain1, StocksModel2 should be trained on stocksTrain2, and StocksModel3 should be trained on stocksTrain3.
+
+Which variables have a positive sign for the coefficient in at least one of StocksModel1, StocksModel2, and StocksModel3 and a negative sign for the coefficient in at least one of StocksModel1, StocksModel2, and StocksModel3? Select all that apply.
+
+
+
+ ReturnJan   ReturnFeb   ReturnMar   ReturnApr   ReturnMay   ReturnJune   ReturnJuly   ReturnAug   ReturnSep   ReturnOct   ReturnNov   
+
+
+- This answer is unanswered.  
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+
+Problem 4.3 - Cluster-Specific Predictions 
+
+(6 points possible)
+ 
+
+
+
+Using StocksModel1, make test-set predictions called PredictTest1 on the data frame stocksTest1. Using StocksModel2, make test-set predictions called PredictTest2 on the data frame stocksTest2. Using StocksModel3, make test-set predictions called PredictTest3 on the data frame stocksTest3.
+
+What is the overall accuracy of StocksModel1 on the test set stocksTest1, using a threshold of 0.5?
+
+
+
+ - unanswered   
+Answer: 
+ 
+What is the overall accuracy of StocksModel2 on the test set stocksTest2, using a threshold of 0.5?
+
+
+
+ - unanswered   
+Answer: 
+ 
+What is the overall accuracy of StocksModel3 on the test set stocksTest3, using a threshold of 0.5?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+Checkyour answer Saveyour answer 
+You have used 0 of 5 submissions 
+ 
+
+
+
+Problem 4.4 - Cluster-Specific Predictions 
+
+(1 point possible)
+ 
+
+
+
+To compute the overall test-set accuracy of the cluster-then-predict approach, we can combine all the test-set predictions into a single vector and all the true outcomes into a single vector:
+
+AllPredictions = c(PredictTest1, PredictTest2, PredictTest3)
+
+AllOutcomes = c(stocksTest1$PositiveDec, stocksTest2$PositiveDec, stocksTest3$PositiveDec)
+
+What is the overall test-set accuracy of the cluster-then-predict approach, again using a threshold of 0.5?
+
+
+
+ - unanswered   
+Answer: 
+ 
+
+
+We see a modest improvement over the original logistic regression model. Since predicting stock returns is a notoriously hard problem, this is a good increase in accuracy. By investing in stocks for which we are more confident that they will have positive returns (by selecting the ones with higher predicted probabilities), this cluster-then-predict model can give us an edge over the original logistic regression model. 
+
+Checkyour answer Saveyour answer 
+You have used 0 of 3 submissions 
+ 
+
+
+Please remember not to ask for or post complete answers to homework questions in this discussion forum.
+
