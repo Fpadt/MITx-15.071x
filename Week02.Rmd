@@ -62,6 +62,7 @@ fSSE <- function(pDT){
 ```{r}
 dtWine <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/wine.csv")
 
+str(dtWine)
 mod <- lm(Price ~ HarvestRain + WinterRain, data = dtWine)
 summary(mod)
 cor(dtWine)
@@ -129,7 +130,7 @@ Next, build a linear regression model to predict the dependent variable Temp, us
 Enter the model R2 (the "Multiple R-squared" value):
 ```{r}
 dtCLI <- fread(input = "https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/climate_change.csv")
-
+str(dtCLI)
 setnames(dtCLI,
          c("CFC-11", "CFC-12"),
          c("CFC11" , "CFC12"))
@@ -221,6 +222,7 @@ Which of the following variable(s) were eliminated from the full model by the st
 
  MEI  CO2  CH4  N2O  CFC.11  CFC.12  TSI  Aerosols
 - This answer is unanswered.
+
 It is interesting to note that the step function does not address the collinearity of the variables, except that adding highly correlated variables will not improve the R2 significantly. The consequence of this is that the step function will not necessarily produce a very interpretable model - just a model that has balanced quality and simplicity for a particular weighting of quality and simplicity (AIC).
 
 CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 4 submissions

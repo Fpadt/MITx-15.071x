@@ -33,7 +33,7 @@ fRESULTS <- 'hide'
 # Data Settings
 
 pPath     <- "./60_Results" 
-pXLSX     <- paste0("MITx_Week04") 
+pXLSX     <- paste0("MITx_Week06") 
 
 # Open Excel for storing results
 if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){

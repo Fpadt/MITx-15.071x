@@ -1,0 +1,899 @@
+---
+title: "MITx 15.071x - Week07 "
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+Sys.setlocale("LC_ALL", "C")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# Data Settings
+
+pPath     <- "./60_Results" 
+pXLSX     <- paste0("MITx_Week07") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(PROJECT = "MITx_Week07"), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+
+```
+
+*VIDEO's*
+
+```{r Lesson1}
+
+# VIDEO 4 - A BASIC SCATTERPLOT
+
+# Read in data
+
+
+
+WHO = read.csv("./data/raw/WHO7.csv")
+str(WHO)
+
+
+# Plot from Week 1
+
+plot(WHO$GNI, WHO$FertilityRate)
+
+# Let's redo this using ggplot 
+
+# Install and load the ggplot2 library:
+install.packages("ggplot2")
+library(ggplot2)
+
+# Create the ggplot object with the data and the aesthetic mapping:
+scatterplot = ggplot(WHO, aes(x = GNI, y = FertilityRate))
+
+# Add the geom_point geometry
+scatterplot + geom_point()
+
+# Make a line graph instead:
+scatterplot + geom_line()
+
+# Switch back to our points:
+scatterplot + geom_point()
+
+# Redo the plot with blue triangles instead of circles:
+scatterplot + geom_point(color = "blue", size = 3, shape = 17) 
+
+# Another option:
+scatterplot + geom_point(color = "darkred", size = 3, shape = 8) 
+
+# Add a title to the plot:
+scatterplot + geom_point(colour = "blue", size = 3, shape = 17) + ggtitle("Fertility Rate vs. Gross National Income")
+
+# Save our plot:
+fertilityGNIplot = scatterplot + geom_point(colour = "blue", size = 3, shape = 17) + ggtitle("Fertility Rate vs. Gross National Income")
+
+pdf("MyPlot.pdf")
+
+print(fertilityGNIplot)
+
+dev.off()
+```
+
+```{r VIDEO 5}
+# VIDEO 5 - MORE ADVANCED SCATTERPLOTS 
+
+
+# Color the points by region: 
+ggplot(WHO, aes(x = GNI, y = FertilityRate, color = Region)) + geom_point()
+
+# Color the points according to life expectancy:
+ggplot(WHO, aes(x = GNI, y = FertilityRate, color = LifeExpectancy)) + geom_point()
+
+
+# Is the fertility rate of a country was a good predictor of the percentage of the population under 15?
+ggplot(WHO, aes(x = FertilityRate, y = Under15)) + geom_point()
+
+# Let's try a log transformation:
+ggplot(WHO, aes(x = log(FertilityRate), y = Under15)) + geom_point()
+
+# Simple linear regression model to predict the percentage of the population under 15, using the log of the fertility rate:
+mod = lm(Under15 ~ log(FertilityRate), data = WHO)
+summary(mod)
+
+# Add this regression line to our plot:
+ggplot(WHO, aes(x = log(FertilityRate), y = Under15)) + geom_point() + 
+  stat_smooth(method = "lm")
+
+# 99% confidence interval
+ggplot(WHO, aes(x = log(FertilityRate), y = Under15)) + geom_point() + 
+  stat_smooth(method = "lm", level = 0.99)
+
+# No confidence interval in the plot
+ggplot(WHO, aes(x = log(FertilityRate), y = Under15)) + geom_point() + 
+  stat_smooth(method = "lm", se = FALSE)
+
+# Change the color of the regression line:
+ggplot(WHO, aes(x = log(FertilityRate), y = Under15)) + geom_point() + 
+  stat_smooth(method = "lm", colour = "orange")
+```
+
+```{r L02V03}
+dtMVT <- fread("https://d37djvu3ytnwxt.cloudfront.net/asset-v1:MITx+15.071x_3+1T2016+type@asset+block/mvt.csv", stringsAsFactors = FALSE)
+
+mvt = read.csv("./data/raw/mvt.csv")
+identical(mvt, dtMVT)
+
+# Convert the Date variable to a format that R will recognize:
+mvt$Date = strptime(mvt$Date, format="%m/%d/%y %H:%M")
+# dtMVT[, Date:= strptime(Date, format="%m/%d/%y %H:%M")] Does not work
+
+# Extract the hour and the day of the week:
+mvt$Weekday = weekdays(mvt$Date)
+mvt$Hour = mvt$Date$hour
+
+# Let's take a look at the structure of our data again:
+str(mvt)
+
+# Create a simple line plot - need the total number of crimes on each day of the week. We can get this information by creating a table:
+table(mvt$Weekday)
+
+# Save this table as a data frame:
+WeekdayCounts = as.data.frame(table(mvt$Weekday))
+
+str(WeekdayCounts) 
+
+# Create our plot
+ggplot(WeekdayCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1))  
+
+# Make the "Var1" variable an ORDERED factor variable
+WeekdayCounts$Var1 = factor(WeekdayCounts$Var1, ordered=TRUE, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday"))
+
+# Try again:
+ggplot(WeekdayCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1))
+
+# Change our x and y labels:
+ggplot(WeekdayCounts, aes(x=Var1, y=Freq)) + geom_line(aes(group=1)) + 
+  xlab("Day of the Week") + ylab("Total Motor Vehicle Thefts")
+
+
+
+```
+
+```{r Video6}
+# VIDEO 6 - Geographical Map on US
+
+# Load our data:
+murders = read.csv("./data/raw/murders.csv")
+
+str(murders)
+
+# Load the map of the US
+statesMap = map_data("state")
+
+str(statesMap)
+
+# Plot the map:
+ggplot(statesMap, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(fill = "white", color = "black") 
+
+# Create a new variable called region with the lowercase names to match the statesMap:
+murders$region = tolower(murders$State)
+
+# Join the statesMap data and the murders data into one dataframe:
+murderMap = merge(statesMap, murders, by="region")
+str(murderMap)
+
+# Plot the number of murder on our map of the United States:
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = Murders)) + 
+  geom_polygon(color = "black") + 
+  scale_fill_gradient(low = "black", high = "red", guide = "legend")
+
+# Plot a map of the population:
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = Population)) + 
+  geom_polygon(color = "black") + 
+  scale_fill_gradient(low = "black", high = "red", guide = "legend")
+
+# Create a new variable that is the number of murders per 100,000 population:
+murderMap$MurderRate = murderMap$Murders / murderMap$Population * 100000
+
+# Redo our plot with murder rate:
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = MurderRate)) + 
+  geom_polygon(color = "black") + 
+  scale_fill_gradient(low = "black", high = "red", guide = "legend")
+
+# Redo the plot, removing any states with murder rates above 10:
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = MurderRate)) + 
+  geom_polygon(color = "black") + 
+  scale_fill_gradient(low = "black", high = "red", guide = "legend", limits = c(0,10))
+
+ggplot(murderMap, aes(x = long, y = lat, group = group, fill = GunOwnership)) + 
+  geom_polygon(color = "black") + 
+  scale_fill_gradient(low = "black", high = "red", guide = "legend")
+
+
+```
+
+
+ELECTION FORECASTING REVISITED
+
+In the recitation from Unit 3, we used logistic regression on polling data in order to construct US presidential election predictions. We separated our data into a training set, containing data from 2004 and 2008 polls, and a test set, containing the data from 2012 polls. We then proceeded to develop a logistic regression model to forecast the 2012 US presidential election.
+
+In this homework problem, we'll revisit our logistic regression model from Unit 3, and learn how to plot the output on a map of the United States. Unlike what we did in the Crime lecture, this time we'll be plotting predictions rather than data!
+
+First, load the ggplot2, maps, and ggmap packages using the library function. All three packages should be installed on your computer from lecture, but if not, you may need to install them too using the install.packages function.
+
+Then, load the US map and save it to the variable statesMap, like we did during the Crime lecture:
+
+statesMap = map_data("state")
+
+The maps package contains other built-in maps, including a US county map, a world map, and maps for France and Italy.
+
+Problem 1.1 - Drawing a Map of the US
+
+(1 point possible)
+If you look at the structure of the statesMap data frame using the str function, you should see that there are 6 variables. One of the variables, group, defines the different shapes or polygons on the map. Sometimes a state may have multiple groups, for example, if it includes islands. How many different groups are there?
+```{r }
+library(ggplot2)
+library( maps)
+library(ggmap)
+
+statesMap = map_data("state")
+
+length(unique(statesMap$group))
+ggplot(statesMap, aes(x = long, y = lat, group = group)) + geom_polygon(fill = "white", color = "black")
+```
+
+
+ - unanswered  
+The variable "order" defines the order to connect the points within each group, and the variable "region" gives the name of the state.
+
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.2 - Drawing a Map of the US
+
+(1 point possible)
+You can draw a map of the United States by typing the following in your R console:
+
+ggplot(statesMap, aes(x = long, y = lat, group = group)) + geom_polygon(fill = "white", color = "black")
+
+We specified two colors in geom_polygon -- fill and color. Which one defined the color of the outline of the states?
+
+ fill  color  Neither
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.1 - Coloring the States by Predictions
+
+(2 points possible)
+Now, let's color the map of the US according to our 2012 US presidential election predictions from the Unit 3 Recitation. We'll rebuild the model here, using the dataset PollingImputed.csv. Be sure to use this file so that you don't have to redo the imputation to fill in the missing values, like we did in the Unit 3 Recitation.
+
+Load the data using the read.csv function, and call it "polling". Then split the data using the subset function into a training set called "Train" that has observations from 2004 and 2008, and a testing set called "Test" that has observations from 2012.
+
+Note that we only have 45 states in our testing set, since we are missing observations for Alaska, Delaware, Alabama, Wyoming, and Vermont, so these states will not appear colored in our map.
+
+Then, create a logistic regression model and make predictions on the test set using the following commands:
+
+mod2 = glm(Republican~SurveyUSA+DiffCount, data=Train, family="binomial")
+
+TestPrediction = predict(mod2, newdata=Test, type="response")
+
+TestPrediction gives the predicted probabilities for each state, but let's also create a vector of Republican/Democrat predictions by using the following command:
+
+TestPredictionBinary = as.numeric(TestPrediction > 0.5)
+
+Now, put the predictions and state labels in a data.frame so that we can use ggplot:
+
+predictionDataFrame = data.frame(TestPrediction, TestPredictionBinary, Test$State)
+
+To make sure everything went smoothly, answer the following questions.
+
+For how many states is our binary prediction 1 (for 2012), corresponding to Republican?
+
+```{r}
+library("caTools")
+polling <- read.csv("./data/raw/PollingImputed.csv")
+
+Train <- subset(x = polling, Year %in% c("2004", "2008"))
+Test  <- subset(x = polling, Year %in% c("2012"))
+
+mod2  <- glm(Republican~SurveyUSA+DiffCount, data=Train, family="binomial")
+TestPrediction <- predict(object = mod2, newdata = Test, type = "response")
+TestPredictionBinary = as.numeric(TestPrediction > 0.5)
+
+predictionDataFrame = data.frame(TestPrediction, TestPredictionBinary, Test$State)
+sum(predictionDataFrame$TestPredictionBinary)
+mean(predictionDataFrame$TestPrediction)
+```
+
+ - unanswered  
+What is the average predicted probability of our model (on the Test set, for 2012)?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.2 - Coloring the States by Predictions
+
+(2 points possible)
+Now, we need to merge "predictionDataFrame" with the map data "statesMap", like we did in lecture. Before doing so, we need to convert the Test.State variable to lowercase, so that it matches the region variable in statesMap. Do this by typing the following in your R console:
+
+predictionDataFrame$region = tolower(predictionDataFrame$Test.State)
+
+Now, merge the two data frames using the following command:
+
+predictionMap = merge(statesMap, predictionDataFrame, by = "region")
+
+Lastly, we need to make sure the observations are in order so that the map is drawn properly, by typing the following:
+
+predictionMap = predictionMap[order(predictionMap$order),]
+
+How many observations are there in predictionMap?
+
+```{r}
+predictionDataFrame$region = tolower(predictionDataFrame$Test.State)
+predictionMap = merge(statesMap, predictionDataFrame, by = "region")
+predictionMap = predictionMap[order(predictionMap$order),]
+
+```
+
+
+ - unanswered  
+How many observations are there in statesMap?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.3 - Coloring the States by Predictions
+
+(1 point possible)
+When we merged the data in the previous problem, it caused the number of observations to change. Why? Check out the help page for merge by typing ?merge to help you answer this question.
+
+ Merging the data just combines the two data frames like it would if we used rbind, so the number of observations increased.  We have more observations for each state now, because some observations have the statesMap data, and some observations have the prediction data.  Because we only make predictions for 45 states, we no longer have observations for some of the states. These observations were removed in the merging process.  We merged the observations for which our predictions are identical.
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.4 - Coloring the States by Predictions
+
+(1 point possible)
+Now we are ready to color the US map with our predictions! You can color the states according to our binary predictions by typing the following in your R console:
+
+ggplot(predictionMap, aes(x = long, y = lat, group = group, fill = TestPredictionBinary)) + geom_polygon(color = "black")
+
+The states appear light blue and dark blue in this map. Which color represents a Republican prediction?
+```{r}
+ggplot(predictionMap, aes(x = long, y = lat, group = group, 
+                          fill = TestPredictionBinary)) + geom_polygon(color = "black")
+```
+
+ Light blue  Dark blue
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.5 - Coloring the States by Predictions
+
+(1 point possible)
+We see that the legend displays a blue gradient for outcomes between 0 and 1. However, when plotting the binary predictions there are only two possible outcomes: 0 or 1. Let's replot the map with discrete outcomes. We can also change the color scheme to blue and red, to match the blue color associated with the Democratic Party in the US and the red color associated with the Republican Party in the US. This can be done with the following command:
+
+ggplot(predictionMap, aes(x = long, y = lat, group = group, fill = TestPredictionBinary))+ geom_polygon(color = "black") + scale_fill_gradient(low = "blue", high = "red", guide = "legend", breaks= c(0,1), labels = c("Democrat", "Republican"), name = "Prediction 2012")
+
+Alternatively, we could plot the probabilities instead of the binary predictions. Change the plot command above to instead color the states by the variable TestPrediction. You should see a gradient of colors ranging from red to blue. Do the colors of the states in the map for TestPrediction look different from the colors of the states in the map with TestPredictionBinary? Why or why not?
+
+NOTE: If you have a hard time seeing the red/blue gradient, feel free to change the color scheme, by changing the arguments low = "blue" and high = "red" to colors of your choice (to see all of the color options in R, type colors() in your R console). You can even change it to a gray scale, by changing the low and high colors to "gray" and "black".
+
+ The two maps look very similar. This is because most of our predicted probabilities are close to 0 or close to 1.  The two maps look very similar. This is because TestPrediction and TestPredictionBinary have the exact same values.  The two maps look very different. This is because we have switched from plotting discrete values to plotting continuous values.  The two maps look very different. This is because our predicted probabilites have a wide range of values, and we were not sure about many states.
+ 
+```{r}
+ggplot(predictionMap, aes(x = long, y = lat, group = group, fill = TestPredictionBinary))+ geom_polygon(color = "black") + scale_fill_gradient(low = "blue", high = "red", guide = "legend", breaks= c(0,1), labels = c("Democrat", "Republican"), name = "Prediction 2012")
+
+ggplot(predictionMap, aes(x = long, y = lat, group = group, fill = TestPrediction))+ geom_polygon(color = "black") + scale_fill_gradient(low = "blue", high = "red", guide = "legend", breaks= c(0,1), labels = c("Democrat", "Republican"), name = "Prediction 2012")
+```
+
+ 
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 3.1 - Understanding the Predictions
+
+(1 point possible)
+In the 2012 election, the state of Florida ended up being a very close race. It was ultimately won by the Democratic party. Did we predict this state correctly or incorrectly? To see the names and locations of the different states, take a look at the World Atlas map here.
+
+ We correctly predicted that this state would be won by the Democratic party.  We incorrectly predicted this state by predicting that it would be won by the Republican party.
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.2 - Understanding the Predictions
+
+(2 points possible)
+What was our predicted probability for the state of Florida?
+
+
+ - unanswered  
+What does this imply?
+
+ Our prediction model did a good job of correctly predicting the state of Florida, and we were very confident in our prediction.  Our prediction model did a good job of correctly predicting the state of Florida, but we were not very confident in the prediction.  Our prediction model did not do a very good job of correctly predicting the state of Florida, but we were not very confident in our prediction.  Our prediction model did not do a very good job of correctly predicting the state of Florida, and we were very confident in our incorrect prediction.
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+PROBLEM 4 - PARAMETER SETTINGS
+
+In this part, we'll explore what the different parameter settings of geom_polygon do. Throughout the problem, use the help page for geom_polygon, which can be accessed by ?geom_polygon. To see more information about a certain parameter, just type a question mark and then the parameter name to get the help page for that parameter. Experiment with different parameter settings to try and replicate the plots!
+
+We'll be asking questions about the following three plots:
+
+Plot (1)
+
+
+
+Plot (2)
+
+
+
+Plot (3)
+
+
+
+Problem 4.1 - Parameter Settings
+
+(2 points possible)
+Plots (1) and (2) were created by setting different parameters of geom_polygon to the value 3.
+
+What is the name of the parameter we set to have value 3 to create plot (1)?
+```{r}
+ggplot(predictionMap, aes(x = long, y = lat, group = group, fill = TestPrediction)) +
+  geom_polygon(color = "black",linetype = 3, size = 3) + 
+  scale_fill_gradient(low = "blue", high = "red", 
+                      guide = "legend", breaks= c(0,1), 
+                      labels = c("Democrat", "Republican"), name = "Prediction 2012")
+```
+
+
+ - unanswered  
+What is the name of the parameter we set to have value 3 to create plot (2)?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 4.2 - Parameter Settings
+
+(1 point possible)
+Plot (3) was created by changing the value of a different geom_polygon parameter to have value 0.3. Which parameter did we use?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+ Please remember not to ask for or post complete answers to homework questions in this discussion forum.
+ 
+ #########################################################
+ 
+ VISUALIZING NETWORK DATA
+
+The cliche goes that the world is an increasingly interconnected place, and the connections between different entities are often best represented with a graph. Graphs are comprised of vertices (also often called "nodes") and edges connecting those nodes. In this assignment, we will learn how to visualize networks using the igraph package in R.
+
+For this assignment, we will visualize social networking data using anonymized data from Facebook; this data was originally curated in a recent paper about computing social circles in social networks. In our visualizations, the vertices in our network will represent Facebook users and the edges will represent these users being Facebook friends with each other.
+
+The first file we will use, edges.csv, contains variables V1 and V2, which label the endpoints of edges in our network. Each row represents a pair of users in our graph who are Facebook friends. For a pair of friends A and B, edges.csv will only contain a single row -- the smaller identifier will be listed first in this row. From this row, we will know that A is friends with B and B is friends with A.
+
+The second file, users.csv, contains information about the Facebook users, who are the vertices in our network. This file contains the following variables:
+
+id: A unique identifier for this user; this is the value that appears in the rows of edges.csv
+
+gender: An identifier for the gender of a user taking the values A and B. Because the data is anonymized, we don't know which value refers to males and which value refers to females.
+
+school: An identifier for the school the user attended taking the values A and AB (users with AB attended school A as well as another school B). Because the data is anonymized, we don't know the schools represented by A and B.
+
+locale: An identifier for the locale of the user taking the values A and B. Because the data is anonymized, we don't know which value refers to what locale.
+
+Problem 1.1 - Summarizing the Data
+
+(2 points possible)
+Load the data from edges.csv into a data frame called edges, and load the data from users.csv into a data frame called users.
+
+How many Facebook users are there in our dataset?
+
+```{r}
+library(data.table)
+edges <- read.csv("./data/raw/edges.csv")
+users <- read.csv("./data/raw/users.csv")
+
+DF1 <- as.data.frame(table(edges$V1))
+DF2 <- as.data.frame(table(edges$V2))
+dt3 <- as.data.table(rbind(DF1, DF2))[, sum(Freq), by=.(Var1)]
+
+mean(dt3$V1)
+
+dt4 <- as.data.table(rbind(edges, data.frame(V1 = edges$V2, V2 = edges$V1)))
+dt5 <- as.data.table(table(dt4$V1))[, .(N=sum(N)), by=.(V1)]
+mean(dt5$N)
+```
+
+ - unanswered  
+In our dataset, what is the average number of friends per user? Hint: this question is tricky, and it might help to start by thinking about a small example with two users who are friends.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 5 submissions
+Problem 1.2 - Summarizing the Data
+
+(1 point possible)
+Out of all the students who listed a school, what was the most common locale?
+
+ Locale A  Locale B
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 1.3 - Summarizing the Data
+
+(1 point possible)
+Is it possible that either school A or B is an all-girls or all-boys school?
+
+ No  Yes
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.1 - Creating a Network
+
+(1 point possible)
+We will be using the igraph package to visualize networks; install and load this package using the install.packages and library commands.
+
+We can create a new graph object using the graph.data.frame() function. Based on ?graph.data.frame, which of the following commands will create a graph g describing our social network, with the attributes of each user correctly loaded?
+
+Note: A directed graph is one where the edges only go one way -- they point from one vertex to another. The other option is an undirected graph, which means that the relations between the vertices are symmetric.
+
+ g = graph.data.frame(edges, FALSE, users)  g = graph.data.frame(users, FALSE, edges)  g = graph.data.frame(edges, TRUE, users)  g = graph.data.frame(users, TRUE, edges)
+
+```{r}
+# install.packages("igraph")
+library(igraph) 
+g <-  graph.data.frame(edges, FALSE, users) 
+plot(g, vertex.size=5, vertex.label=NA)
+sort(degree(g))
+ table(degree(g) >= 10)
+
+ V(g)$size = degree(g)/2+2 
+ plot(g, vertex.label=NA)
+```
+
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.2 - Creating a Network
+
+(2 points possible)
+Use the correct command from Problem 2.1 to load the graph g.
+
+Now, we want to plot our graph. By default, the vertices are large and have text labels of a user's identifier. Because this would clutter the output, we will plot with no text labels and smaller vertices:
+
+plot(g, vertex.size=5, vertex.label=NA)
+
+In this graph, there are a number of groups of nodes where all the nodes in each group are connected but the groups are disjoint from one another, forming "islands" in the graph. Such groups are called "connected components," or "components" for short. How many connected components with at least 2 nodes are there in the graph?
+
+
+ - unanswered  
+How many users are there with no friends in the network?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.3 - Creating a Network
+
+(1 point possible)
+In our graph, the "degree" of a node is its number of friends. We have already seen that some nodes in our graph have degree 0 (these are the nodes with no friends), while others have much higher degree. We can use degree(g) to compute the degree of all the nodes in our graph g.
+
+How many users are friends with 10 or more other Facebook users in this network?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.4 - Creating a Network
+
+(2 points possible)
+In a network, it's often visually useful to draw attention to "important" nodes in the network. While this might mean different things in different contexts, in a social network we might consider a user with a large number of friends to be an important user. From the previous problem, we know this is the same as saying that nodes with a high degree are important users.
+
+To visually draw attention to these nodes, we will change the size of the vertices so the vertices with high degrees are larger. To do this, we will change the "size" attribute of the vertices of our graph to be an increasing function of their degrees:
+
+V(g)$size = degree(g)/2+2
+
+Now that we have specified the vertex size of each vertex, we will no longer use the vertex.size parameter when we plot our graph:
+
+plot(g, vertex.label=NA)
+
+What is the largest size we assigned to any node in our graph?
+
+
+ - unanswered  
+What is the smallest size we assigned to any node in our graph?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 3.1 - Coloring Vertices
+
+(1 point possible)
+Thus far, we have changed the "size" attributes of our vertices. However, we can also change the colors of vertices to capture additional information about the Facebook users we are depicting.
+
+When changing the size of nodes, we first obtained the vertices of our graph with V(g) and then accessed the the size attribute with V(g)$size. To change the color, we will update the attribute V(g)$color.
+
+To color the vertices based on the gender of the user, we will need access to that variable. When we created our graph g, we provided it with the data frame users, which had variables gender, school, and locale. These are now stored as attributes V(g)$gender, V(g)$school, and V(g)$locale.
+
+We can update the colors by setting the color to black for all vertices, than setting it to red for the vertices with gender A and setting it to gray for the vertices with gender B:
+
+V(g)$color = "black"
+
+V(g)$color[V(g)$gender == "A"] = "red"
+
+V(g)$color[V(g)$gender == "B"] = "gray"
+
+Plot the resulting graph. What is the gender of the users with the highest degree in the graph?
+
+ Missing gender value  Gender A  Gender B
+ 
+```{r}
+V(g)$color = "black"
+
+V(g)$color[V(g)$gender == "A"] = "red"
+
+V(g)$color[V(g)$gender == "B"] = "gray"
+plot(g, vertex.label=NA)
+```
+
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.2 - Coloring Vertices
+
+(2 points possible)
+Now, color the vertices based on the school that each user in our network attended.
+
+Are the two users who attended both schools A and B Facebook friends with each other?
+```{r}
+V(g)$color = "black"
+
+V(g)$color[V(g)$school == "A"] = "red"
+
+V(g)$color[V(g)$school == "AB"] = "gray"
+plot(g, vertex.label=NA)
+```
+
+ Yes  No
+- This answer is unanswered.
+What best describes the users with highest degree?
+
+ None of the high-degree users attended school A  Some, but not all, of the high-degree users attended school A  All of the high-degree users attended school A
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.3 - Coloring Vertices
+
+(2 points possible)
+Now, color the vertices based on the locale of the user.
+
+The large connected component is most associated with which locale?
+
+```{r}
+V(g)$color = "black"
+
+V(g)$color[V(g)$locale == "A"] = "red"
+
+V(g)$color[V(g)$locale == "B"] = "gray"
+plot(g, vertex.label=NA)
+```
+
+ Locale A  Locale B
+- This answer is unanswered.
+The 4-user connected component is most associated with which locale?
+
+ Locale A  Locale B
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 4 - Other Plotting Options
+
+(2 points possible)
+The help page is a helpful tool when making visualizations. Answer the following questions with the help of ?igraph.plotting and experimentation in your R console.
+
+Which igraph plotting function would enable us to plot our graph in 3-D?
+
+
+ - unanswered  
+What parameter to the plot() function would we use to change the edge width when plotting g?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 4 submissions
+ Please remember not to ask for or post complete answers to homework questions in this discussion forum.
+ 
+ #############################################################
+ 
+ VISUALIZING TEXT DATA USING WORD CLOUDS
+
+Earlier in the course, we used text analytics as a predictive tool, using word frequencies as independent variables in our models. However, sometimes our goal is to understand commonly occurring topics in text data instead of to predict the value of some dependent variable. In such cases, word clouds can be a visually appealing way to display the most frequent words in a body of text.
+
+A word cloud arranges the most common words in some text, using size to indicate the frequency of a word. For instance, this is a word cloud for the complete works of Shakespeare, removing English stopwords:
+
+Shakespeare word cloud
+
+While we could generate word clouds using free generators available on the Internet, we will have more flexibility and control over the process if we do so in R. We will visualize the text of tweets about Apple, a dataset we used earlier in the course. As a reminder, this dataset (which can be downloaded from tweets.csv) has the following variables:
+
+Tweet -- the text of the tweet
+
+Avg -- the sentiment of the tweet, as assigned by users of Amazon Mechanical Turk. The score ranges on a scale from -2 to 2, where 2 means highly positive sentiment, -2 means highly negative sentiment, and 0 means neutral sentiment.
+
+Problem 1.1 - Preparing the Data
+
+(1 point possible)
+Download the dataset "tweets.csv", and load it into a data frame called "tweets" using the read.csv() function, remembering to use stringsAsFactors=FALSE when loading the data.
+
+Next, perform the following pre-processing tasks (like we did in Unit 5), noting that we don't stem the words in the document or remove sparse terms:
+
+1) Create a corpus using the Tweet variable
+
+2) Convert the corpus to lowercase (don't forget to type "corpus = tm_map(corpus, PlainTextDocument)" in your R console right after this step)
+
+3) Remove punctuation from the corpus
+
+4) Remove all English-language stopwords
+
+5) Build a document-term matrix out of the corpus
+
+6) Convert the document-term matrix to a data frame called allTweets
+
+How many unique words are there across all the documents?
+
+
+ unanswered  
+ 
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 1.2 - Preparing the Data
+
+(1 point possible)
+Although we typically stem words during the text preprocessing step, we did not do so here. What is the most compelling rationale for skipping this step when visualizing text data?
+
+ It avoids the computational burden of stemming  It will be easier to read and understand the word cloud if it includes full words instead of just the word stems  We would not be able to create a word cloud if we stemmed the document
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.1 - Building a Word Cloud
+
+(1 point possible)
+Install and load the "wordcloud" package, which is needed to build word clouds.
+
+As we can read from ?wordcloud, we will need to provide the function with a vector of words and a vector of word frequencies. Which function can we apply to allTweets to get a vector of the words in our dataset, which we'll pass as the first argument to wordcloud()?
+
+ str  rownames  colnames
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.2 - Building a Word Cloud
+
+(1 point possible)
+Which function should we apply to allTweets to obtain the frequency of each word across all tweets?
+
+ colSums  rowSums  sum
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 2.3 - Building a Word Cloud
+
+(1 point possible)
+Use allTweets to build a word cloud. Make sure to check out the help page for wordcloud if you are not sure how to do this.
+
+Because we are plotting a large number of words, you might get warnings that some of the words could not be fit on the page and were therefore not plotted -- this is especially likely if you are using a smaller screen. You can address these warnings by plotting the words smaller. From ?wordcloud, we can see that the "scale" parameter controls the sizes of the plotted words. By default, the sizes range from 4 for the most frequent words to 0.5 for the least frequent, as denoted by the parameter "scale=c(4, 0.5)". We could obtain a much smaller plot with, for instance, parameter "scale=c(2, 0.25)".
+
+What is the most common word across all the tweets (it will be the largest in the outputted word cloud)? Please type the word exactly how you see it in the word cloud. The most frequent word might not be printed if you got a warning about words being cut off -- if this happened, be sure to follow the instructions in the paragraph above.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+Problem 2.4 - Building a Word Cloud
+
+(1 point possible)
+In the previous subproblem, we noted that there is one word with a much higher frequency than the other words. Repeat the steps to load and pre-process the corpus, this time removing the most frequent word in addition to all elements of stopwords("english") in the call to tm_map with removeWords. For a refresher on how to remove this additional word, see the Twitter text analytics lecture.
+
+Replace allTweets with the document-term matrix of this new corpus -- we will use this updated corpus for the remainder of the assignment.
+
+Create a word cloud with the updated corpus. What is the most common word in this new corpus (the largest word in the outputted word cloud)? The most frequent word might not be printed if you got a warning about words being cut off -- if this happened, be sure to follow the instructions in the previous problem.
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 3 submissions
+PROBLEM 3 - SIZE AND COLOR
+
+So far, the word clouds we've built have not been too visually appealing -- they are crowded by having too many words displayed, and they don't take advantage of color. One important step to building visually appealing visualizations is to experiment with the parameters available, which in this case can be viewed by typing ?wordcloud in your R console. In this problem, you should look through the help page and experiment with different parameters to answer the questions.
+
+Below are four word clouds, each of which uses different parameter settings in the call to the wordcloud() function:
+
+Word Cloud A:
+
+Word Cloud A
+
+Word Cloud B:
+
+Word Cloud B
+
+Word Cloud C:
+
+Word Cloud C
+
+Word Cloud D:
+
+Word Cloud D
+
+We will refer to these four word clouds in the next several problems.
+
+Problem 3.1 - Size and Color
+
+(1 point possible)
+Which word cloud is based only on the negative tweets (tweets with Avg value -1 or less)?
+
+ Word Cloud A  Word Cloud B  Word Cloud C  Word Cloud D
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.2 - Size and Color
+
+(1 point possible)
+Only one word cloud was created without modifying parameters min.freq or max.words. Which word cloud is this?
+
+ Word Cloud A  Word Cloud B  Word Cloud C  Word Cloud D
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.3 - Size and Color
+
+(1 point possible)
+Which word clouds were created with parameter random.order set to FALSE?
+
+ Word Cloud A  Word Cloud B  Word Cloud C  Word Cloud D
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 3.4 - Size and Color
+
+(1 point possible)
+Which word cloud was built with a non-default value for parameter rot.per?
+
+ Word Cloud A  Word Cloud B  Word Cloud C  Word Cloud D
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 3.5 - Size and Color
+
+(1 point possible)
+In Word Cloud C and Word Cloud D, we provided a color palette ranging from light purple to dark purple as the parameter colors (you will learn how to make such a color palette later in this assignment). For which word cloud was the parameter random.color set to TRUE?
+
+ Word Cloud C  Word Cloud D
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 4.1 - Selecting a Color Palette
+
+(1 point possible)
+The use of a palette of colors can often improve the overall effect of a visualization. We can easily select our own colors when plotting; for instance, we could pass c("red", "green", "blue") as the colors parameter to wordcloud(). The RColorBrewer package, which is based on the ColorBrewer project (colorbrewer.org), provides pre-selected palettes that can lead to more visually appealing images. Though these palettes are designed specifically for coloring maps, we can also use them in our word clouds and other visualizations.
+
+Begin by installing and loading the "RColorBrewer" package. This package may have already been installed and loaded when you installed and loaded the "wordcloud" package, in which case you don't need to go through this additional installation step. If you obtain errors (for instance, "Error: lazy-load database 'P' is corrupt") after installing and loading the RColorBrewer package and running some of the commands, try closing and re-opening R.
+
+The function brewer.pal() returns color palettes from the ColorBrewer project when provided with appropriate parameters, and the function display.brewer.all() displays the palettes we can choose from.
+
+Which color palette would be most appropriate for use in a word cloud for which we want to use color to indicate word frequency?
+
+ Accent  Set2  YlOrRd
+- This answer is unanswered.
+FINAL CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 1 submissions
+Problem 4.2 - Selecting a Color Palette
+
+(1 point possible)
+Which RColorBrewer palette name would be most appropriate to use when preparing an image for a document that must be in grayscale?
+
+
+ - unanswered  
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+Problem 4.3 - Selecting a Color Palette
+
+(1 point possible)
+In sequential palettes, sometimes there is an undesirably large contrast between the lightest and darkest colors. You can see this effect when plotting a word cloud for allTweets with parameter colors=brewer.pal(9, "Blues"), which returns a sequential blue palette with 9 colors.
+
+Which of the following commands addresses this issue by removing the first 4 elements of the 9-color palette of blue colors? Select all that apply.
+
+ brewer.pal(9, "Blues")[c(-5, -6, -7, -8, -9)]  brewer.pal(9, "Blues")[c(-1, -2, -3, -4)]  brewer.pal(9, "Blues")[c(1, 2, 3, 4)]  brewer.pal(9, "Blues")[c(5, 6, 7, 8, 9)]
+- This answer is unanswered.
+CHECK YOUR ANSWER  SAVE YOUR ANSWER You have used 0 of 2 submissions
+ Please remember not to ask for or post complete answers to homework questions in this discussion forum.

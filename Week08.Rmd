@@ -1,0 +1,46 @@
+---
+title: "MITx 15.071x - Week07 "
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+Sys.setlocale("LC_ALL", "C")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# Data Settings
+
+pPath     <- "./60_Results" 
+pXLSX     <- paste0("MITx_Week07") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(PROJECT = "MITx_Week07"), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+
+```
